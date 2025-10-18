@@ -1,0 +1,67 @@
+# ======================
+# .NET / ASP.NET Core
+# ======================
+
+# Build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio folder
+.vs/
+.vscode/
+
+# ASP.NET secrets
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# IIS / Web stuff
+*.dbmdl
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+project.lock.json
+
+# Resharper / Rider
+_ReSharper*/
+*.DotSettings.user
+
+# DotCover
+.idea/
+*.dotCover
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Logs
+*.log
+logs/
+Logs/
+
+# Environment files
+.env
+.env.local
+.env.development
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Optional: Node.js frontend in same repo
+node_modules/
+dist/
+build/
+
+# Backup / temp files
+*.tmp
+*.bak
+*.swp

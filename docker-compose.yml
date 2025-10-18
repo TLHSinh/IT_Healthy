@@ -1,0 +1,51 @@
+
+services:
+  # ---------- DATABASE ----------
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver_ithealthy
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+    networks:
+      - ithealthy_network
+
+  # ---------- BACKEND ----------
+  backend:
+    build: ./ITHealthy_BE
+    container_name: ithealthy_backend
+    ports:
+      - "5000:8080"
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__ITHealthyDBConnection=Server=db;Database=IT_Healthy;User Id=sa;Password=Your_password123;TrustServerCertificate=True;
+      - JwtSettings__SecretKey=5c86cda9e55c7f39b851d2a4603b01fd
+      - EmailSetting__SenderEmail=baduaminh25@gmail.com
+      - EmailSetting__Username=baduaminh25@gmail.com
+      - EmailSetting__Password=sewn tkcp ofbr ypvk
+    networks:
+      - ithealthy_network
+
+
+  # ---------- FRONTEND ----------
+  frontend:
+    build: ./ithealthy-fe
+    container_name: ithealthy_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ithealthy_network
+
+volumes:
+  sql_data:
+
+networks:
+  ithealthy_network:
