@@ -64,7 +64,9 @@ builder.Services
 // ============================
 // 5️⃣ Đăng ký dịch vụ ứng dụng
 // ============================
-builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<UserTokenService, TokenService>();
+builder.Services.AddScoped<AdminTokenService, TokenService>();
+
 
 // ============================
 // 6️⃣ Xây dựng app

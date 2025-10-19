@@ -16,14 +16,17 @@ namespace ITHealthy.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;
-        private readonly ITokenService _tokenService;
+        private readonly UserTokenService _userTokenService;
+        private readonly AdminTokenService _adminTokenService;
+
         private readonly IEmailService _emailService;
 
-        public AuthController(ITHealthyDbContext context, ITokenService tokenService, IEmailService emailService)
+        public AuthController(ITHealthyDbContext context, UserTokenService userTokenService, AdminTokenService adminTokenService, IEmailService emailService)
         {
             _context = context;
-            _tokenService = tokenService;
-            _emailService = emailService; // 16/10 11h làm tới bước này
+            _userTokenService = userTokenService;
+            _adminTokenService = adminTokenService;
+            _emailService = emailService;
         }
 
         // API Gửi OTP
@@ -121,30 +124,85 @@ namespace ITHealthy.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO dto)
         {
-            var user = await _context.Customers
+            var customer = await _context.Customers
                 .Include(u => u.RefreshTokens)
                 .SingleOrDefaultAsync(u => u.Email == dto.Email);
 
-            if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
-                return Unauthorized(new { Message = "Email hoặc Mật Khẩu không đúng" });
-
-            if ((bool)!user.IsActive)
+            if (customer != null)
             {
-                // Gửi OTP lại cho người dùng
-                await SendOtp(dto.Email);
-                return BadRequest(new { Message = "Tài khoản chưa xác thực. Vui lòng kiểm tra email để nhận OTP." });
+                if (!VerifyPassword(dto.Password, customer.PasswordHash))
+                    return Unauthorized(new { Message = "Email hoặc Mật Khẩu không đúng" });
+
+                if (customer.IsActive == false)
+                {
+                    await SendOtp(dto.Email);
+                    return BadRequest(new { Message = "Tài khoản chưa xác thực. Vui lòng kiểm tra email để nhận OTP." });
+                }
+
+                var accessToken = _userTokenService.CreateAccessTokenUser(customer, new List<string> { "User" });
+                var refreshToken = _userTokenService.CreateRefreshToken(GetIpAddress());
+                customer.RefreshTokens.Add(refreshToken);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    Role = "User",
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken.Token,
+                    User = new
+                    {
+                        customer.CustomerId,
+                        customer.FullName,
+                        customer.Email,
+                        customer.Phone,
+                        customer.Gender,
+                        customer.RoleUser,
+                        customer.Avatar,
+                        customer.IsActive,
+                        customer.CreatedAt
+                    },
+                    //RedirectUrl = "/user/dashboard"
+                });
+            }
+            var staff = await _context.Staff
+                .SingleOrDefaultAsync(s => s.Email == dto.Email);
+
+            if (staff != null)
+            {
+                if (!VerifyPassword(dto.Password, staff.PasswordHash))
+                    return Unauthorized(new { Message = "Email hoặc mật khẩu không đúng" });
+
+                if (staff.IsActive == false)
+                    return BadRequest(new { Message = "Tài khoản Staff chưa được kích hoạt." });
+
+                var accessToken = _adminTokenService.CreateAccessTokenAdmin(staff, new List<string> { "Admin" });
+                // Nếu muốn Staff có refresh token, có thể thêm bảng RefreshToken cho Staff tương tự Customer
+
+                return Ok(new
+                {
+                    Role = "Admin",
+                    AccessToken = accessToken,
+                    Staff = new
+                    {
+                        staff.StaffId,
+                        staff.FullName,
+                        staff.Email,
+                        staff.Phone,
+                        staff.Gender,
+                        staff.RoleStaff,
+                        staff.HireDate,
+                        staff.IsActive,
+                        staff.StoreId
+                    },
+                    //RedirectUrl = "/admin/dashboard"
+                });
             }
 
-            var accessToken = _tokenService.CreateAccessToken(user, new List<string> { "User" });
-            var refreshToken = _tokenService.CreateRefreshToken(GetIpAddress());
-            user.RefreshTokens.Add(refreshToken);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new TokenResponsedDTO(accessToken, refreshToken.Token));
+            // --- 3️⃣ Nếu không tìm thấy ---
+            return Unauthorized(new { Message = "Email không tồn tại trong hệ thống" });
         }
 
-     
+
 
 
         //  HÀM HỖ TRỢ: gửi OTP
@@ -195,13 +253,13 @@ namespace ITHealthy.Controllers
             existingToken.Revoked = DateTime.UtcNow;
             existingToken.RevokedById = GetIpAddress();
 
-            var newRefreshToken = _tokenService.CreateRefreshToken(GetIpAddress());
+            var newRefreshToken = _userTokenService.CreateRefreshToken(GetIpAddress());
             existingToken.ReplacedByToken = newRefreshToken.Token;
             user.RefreshTokens.Add(newRefreshToken);
 
             await _context.SaveChangesAsync();
 
-            var newAccessToken = _tokenService.CreateAccessToken(user, new List<string> { "User" });
+            var newAccessToken = _userTokenService.CreateAccessTokenUser(user, new List<string> { "User" });
 
             return Ok(new TokenResponsedDTO(newAccessToken, newRefreshToken.Token));
         }
