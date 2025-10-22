@@ -16,7 +16,7 @@ namespace ITHealthy.Services
         public EmailService(IOptions<EmailSetting> options)
         {
             _settings = options.Value;
-            
+
 
             if (string.IsNullOrEmpty(_settings.SenderEmail))
                 throw new Exception("⚠️ SenderEmail chưa được cấu hình trong appsettings.json");

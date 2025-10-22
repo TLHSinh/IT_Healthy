@@ -1,0 +1,56 @@
+CÀI ĐẶT VÀ CHẠY DỰ ÁN IT_HEALTHY
+
+**# NẾU CHẠY FILE BE HOẶC FE TRỤC TIẾP KO QUA DOCKER**
+
+0.  CÀI ĐẶT SDK .Net9.0 (ASP.NET CORE)
+
+1.  CÀI ĐẶT CÁC GÓI NUGET CẦN THIẾT CHO BACKEND (ASP.NET CORE)
+
+Tại thư mục ITHealthy_BE, mở Terminal (hoặc PowerShell) và chạy lần lượt từng lệnh sau:
+
+dotnet add package Microsoft.EntityFrameworkCore
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add package Microsoft.EntityFrameworkCore.Tools
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add package Microsoft.IdentityModel.Tokens
+dotnet add package System.IdentityModel.Tokens.Jwt
+dotnet add package Swashbuckle.AspNetCore
+
+2.  BUILD VÀ CHẠY BACKEND
+
+Sau khi cài đặt đầy đủ các package, chạy dự án bằng cách:
+
+# B1 Build project
+
+dotnet build
+
+# B2 Chạy project (cách 1)
+
+dotnet run
+
+# Hoặc, chạy ở chế độ tự reload khi thay đổi code (cách 2)
+
+dotnet watch run
+
+**#NẾU CHẠY THÔNG QUA DOCKER**
+
+(Không cần tải các môi trường vì đã được build sẵn)
+lưu ý mỗi lần sửa hoặc thêm code cần mở terminal chạy lệnh **--> docker compose up --build <--** để update code mới vào container docker
+
+3.  CÁC LỆNH DOCKER
+
+# Xây và khởi động toàn bộ hệ thống (BE + FE + DB)
+
+docker compose up --build
+
+# Dừng tất cả container
+
+docker compose down
+
+# Xóa toàn bộ container và volume (dùng khi muốn reset database)
+
+docker compose down -v
+
+# Xem log của backend
+
+docker logs ithealthy_backend

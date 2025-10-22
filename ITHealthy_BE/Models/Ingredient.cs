@@ -9,6 +9,8 @@ public partial class Ingredient
 
     public string IngredientName { get; set; } = null!;
 
+    public int? CategoriesIngredientsId { get; set; }
+
     public string Unit { get; set; } = null!;
 
     public decimal BasePrice { get; set; }
@@ -22,6 +24,8 @@ public partial class Ingredient
     public decimal? Fat { get; set; }
 
     public virtual ICollection<BowlItem> BowlItems { get; set; } = new List<BowlItem>();
+
+    public virtual CategoriesIngredient? CategoriesIngredients { get; set; }
 
     public virtual ICollection<InventoryTransaction> InventoryTransactions { get; set; } = new List<InventoryTransaction>();
 
