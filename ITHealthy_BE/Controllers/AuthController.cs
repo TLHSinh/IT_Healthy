@@ -52,7 +52,12 @@ namespace ITHealthy.Controllers
             _context.UserOtps.Add(userOtp);
             await _context.SaveChangesAsync();
 
-            await _emailService.SendEmailAsync(user.Email, "Mã OTP xác thực", $"Mã OTP của bạn là: {otpCode}");
+            if (!string.IsNullOrEmpty(user.Email))
+            {
+                await _emailService.SendEmailAsync(user.Email, "Mã OTP xác thực", $"Mã OTP của bạn là: {otpCode}");
+            }
+
+            //await _emailService.SendEmailAsync(user.Email!, "Mã OTP xác thực", $"Mã OTP của bạn là: {otpCode}");
 
             return Ok(new { Message = "OTP đã được gửi tới email của bạn" });
         }
