@@ -7,31 +7,40 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ Cấu hình CORS cho React localhost:3000
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.WithOrigins("http://localhost:3000") // 👈 đúng domain React dev
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // 👈 nếu có gửi cookie/token
+    });
+});
 
 // 1️⃣ Đăng ký Controllers
 builder.Services.AddControllers();
 
-// 2️⃣ Cấu hình Swagger / OpenAPI (nếu cần test)
+// 2️⃣ Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// 3️⃣ Email service
 builder.Services.Configure<EmailSetting>(builder.Configuration.GetSection("EmailSetting"));
 builder.Services.AddScoped<IEmailService, EmailService>();
 
-
-
-
-// 3️⃣ Kết nối Database
+// 4️⃣ Database connection
 var connectionString = builder.Configuration.GetConnectionString("ITHealthyDBConnection");
 builder.Services.AddDbContext<ITHealthyDbContext>(options =>
     options.UseSqlServer(connectionString)
 );
 
-
-// 4️⃣ Cấu hình JWT Authentication
+// 5️⃣ JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
@@ -56,24 +65,20 @@ builder.Services
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
-
-            ClockSkew = TimeSpan.Zero // loại bỏ trễ mặc định 5 phút
+            ClockSkew = TimeSpan.Zero
         };
     });
 
-// ============================
-// 5️⃣ Đăng ký dịch vụ ứng dụng
-// ============================
-builder.Services.AddScoped<ITokenService, TokenService>();
+// 6️⃣ Token services
+builder.Services.AddScoped<UserTokenService, TokenService>();
+builder.Services.AddScoped<AdminTokenService, TokenService>();
 
-// ============================
-// 6️⃣ Xây dựng app
-// ============================
+// 7️⃣ Xây dựng app
 var app = builder.Build();
 
-// ============================
-// 7️⃣ Cấu hình middleware
-// ============================
+// ✅ Phải để trước Authentication
+app.UseCors(MyAllowSpecificOrigins);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -81,10 +86,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseAuthentication();  //  phải đặt trước UseAuthorization()
+app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+
+
+
+
+

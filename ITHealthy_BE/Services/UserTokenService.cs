@@ -2,9 +2,9 @@
 
 namespace ITHealthy.Services
 {
-    public interface ITokenService
+    public interface UserTokenService
     {
-        string CreateAccessToken(Customer customer, IList<string> roles);
+        string CreateAccessTokenUser(Customer customer, IList<string> roles);
         RefreshToken CreateRefreshToken(string ipAddress);
 
     }

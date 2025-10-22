@@ -25,7 +25,6 @@ public partial class Customer
 
     public bool? IsActive { get; set; }
 
-
     public DateTime? CreatedAt { get; set; }
 
     public virtual ICollection<Bowl> Bowls { get; set; } = new List<Bowl>();
