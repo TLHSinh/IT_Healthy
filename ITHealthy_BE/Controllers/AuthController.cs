@@ -31,12 +31,37 @@ namespace ITHealthy.Controllers
 
         // API Gửi OTP
         [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOtp([FromBody] string email)
+        public async Task<IActionResult> SendOtp([FromBody] EmailRequestDTO dto)
         {
-            var user = await _context.Customers.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.Customers.FirstOrDefaultAsync(u => u.Email == dto.Email);
             if (user == null)
                 return NotFound(new { Message = "Người dùng không tồn tại" });
 
+            //  Kiểm tra xem có OTP nào vừa gửi gần đây (trong 60 giây)
+            var lastOtp = await _context.UserOtps
+                .Where(o => o.CustomerId == user.CustomerId)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (lastOtp != null && lastOtp.CreatedAt.HasValue)
+            {
+                var secondsSinceLastOtp = (DateTime.UtcNow - lastOtp.CreatedAt.Value).TotalSeconds;
+                if (secondsSinceLastOtp < 30)
+                {
+                    var remaining = Math.Ceiling(30 - secondsSinceLastOtp);
+                    return BadRequest(new { Message = $"Vui lòng chờ {remaining} giây trước khi gửi lại OTP." });
+                }
+            }
+
+            //  Vô hiệu hóa các OTP cũ chưa dùng hoặc còn hạn
+            var oldOtps = await _context.UserOtps
+                .Where(o => o.CustomerId == user.CustomerId && o.IsUsed == false && o.ExpiryTime > DateTime.UtcNow)
+                .ToListAsync();
+            foreach (var otp in oldOtps)
+                otp.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            // Tạo OTP mới
             var otpCode = new Random().Next(100000, 999999).ToString();
             var expiry = DateTime.UtcNow.AddMinutes(5);
 
@@ -52,28 +77,33 @@ namespace ITHealthy.Controllers
             _context.UserOtps.Add(userOtp);
             await _context.SaveChangesAsync();
 
+            //  Gửi email
             if (!string.IsNullOrEmpty(user.Email))
             {
-                await _emailService.SendEmailAsync(user.Email, "Mã OTP xác thực", $"Mã OTP của bạn là: {otpCode}");
+                await _emailService.SendEmailAsync(user.Email, "Mã OTP xác thực ITHealthy",
+                    $"Xin chào {user.FullName},\n\nMã OTP của bạn là: {otpCode}\nMã sẽ hết hạn sau 5 phút.\n\nITHealthy Team");
             }
-
-            //await _emailService.SendEmailAsync(user.Email!, "Mã OTP xác thực", $"Mã OTP của bạn là: {otpCode}");
 
             return Ok(new { Message = "OTP đã được gửi tới email của bạn" });
         }
 
 
-        //API Xác thực OTP
+        //  API Xác thực OTP
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDTO dto)
         {
+            var user = await _context.Customers.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null)
+                return NotFound(new { Message = "Không tìm thấy người dùng" });
+
+            // 🔍 Lấy OTP mới nhất của user
             var otp = await _context.UserOtps
-                .Where(x => x.Customer.Email == dto.Email && x.Otpcode == dto.Otp)
+                .Where(x => x.CustomerId == user.CustomerId)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
 
             if (otp == null)
-                return BadRequest(new { Message = "OTP không hợp lệ" });
+                return BadRequest(new { Message = "Không tìm thấy OTP" });
 
             if (otp.IsUsed == true)
                 return BadRequest(new { Message = "OTP đã được sử dụng" });
@@ -81,11 +111,11 @@ namespace ITHealthy.Controllers
             if (otp.ExpiryTime < DateTime.UtcNow)
                 return BadRequest(new { Message = "OTP đã hết hạn" });
 
-            otp.IsUsed = true;
+            if (otp.Otpcode != dto.Otp)
+                return BadRequest(new { Message = "Mã OTP không đúng hoặc đã bị thay thế" });
 
-            // Xác minh đăng ký
-            var user = await _context.Customers.FirstOrDefaultAsync(u => u.Email == dto.Email);
-            if (user == null) return NotFound();
+            // ✅ Hợp lệ
+            otp.IsUsed = true;
             user.IsActive = true;
 
             await _context.SaveChangesAsync();
@@ -140,7 +170,7 @@ namespace ITHealthy.Controllers
 
                 if (customer.IsActive == false)
                 {
-                    await SendOtp(dto.Email);
+                    await SendOtp(new EmailRequestDTO { Email = dto.Email });
                     return BadRequest(new { Message = "Tài khoản chưa xác thực. Vui lòng kiểm tra email để nhận OTP." });
                 }
 
