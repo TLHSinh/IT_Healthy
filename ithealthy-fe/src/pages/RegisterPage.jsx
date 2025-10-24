@@ -254,6 +254,7 @@ export default function RegisterPage() {
             >
               {loading ? <HashLoader size={30} color="#fff" /> : "Đăng ký"}
             </button>
+            
           </form>
 
           <p className="text-center text-gray-500 text-sm mt-5">
@@ -262,6 +263,7 @@ export default function RegisterPage() {
               Đăng nhập
             </Link>
           </p>
+
         </div>
       </div>
     </section>
