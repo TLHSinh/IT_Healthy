@@ -49,13 +49,17 @@ export default function VerifyOtpPage() {
 
       const result = await response.json();
 
-      toast.info(result.message || "🔄 Mã OTP mới đã được gửi đến email của bạn!");
+      toast.info(
+        result.message || "🔄 Mã OTP mới đã được gửi đến email của bạn!"
+      );
 
       // Reset 6 ô OTP & bắt đầu đếm ngược
       setOtp(["", "", "", "", "", ""]);
       setResendTime(60);
     } catch (err) {
-      toast.error(err.message || "Không thể gửi lại mã OTP, vui lòng thử lại sau!");
+      toast.error(
+        err.message || "Không thể gửi lại mã OTP, vui lòng thử lại sau!"
+      );
     } finally {
       setResending(false);
     }
@@ -99,8 +103,7 @@ export default function VerifyOtpPage() {
       console.error(err);
       setShake(true);
       toast.error(
-        err.response?.data?.message ||
-          "Mã OTP không hợp lệ hoặc đã hết hạn!"
+        err.response?.data?.message || "Mã OTP không hợp lệ hoặc đã hết hạn!"
       );
       setTimeout(() => setShake(false), 500);
     } finally {
