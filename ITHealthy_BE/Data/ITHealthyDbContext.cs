@@ -818,7 +818,37 @@ public partial class ITHealthyDbContext : DbContext
             entity.HasKey(e => e.StoreId).HasName("PK__Stores__3B82F0E15C3734FF");
 
             entity.Property(e => e.StoreId).HasColumnName("StoreID");
-            entity.Property(e => e.AddressStore).HasMaxLength(200);
+            // Địa chỉ chi tiết
+            entity.Property(e => e.StreetAddress)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            entity.Property(e => e.Ward)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.District)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.City)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Country)
+                .HasMaxLength(100)
+                .HasDefaultValue("Việt Nam");
+
+            entity.Property(e => e.Postcode)
+                .HasMaxLength(10);
+
+            // Bản đồ / vị trí
+            entity.Property(e => e.Latitude)
+                .HasColumnType("decimal(9, 6)");
+
+            entity.Property(e => e.Longitude)
+                .HasColumnType("decimal(9, 6)");
+
+            entity.Property(e => e.GooglePlaceId)
+                .HasMaxLength(255)
+                .HasColumnName("GooglePlaceID");
             entity.Property(e => e.DateJoined).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Phone).HasMaxLength(20);
