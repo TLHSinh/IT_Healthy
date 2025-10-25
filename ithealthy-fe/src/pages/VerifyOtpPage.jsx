@@ -35,11 +35,27 @@ export default function VerifyOtpPage() {
 
     try {
       setResending(true);
-      await authApi.resendOtp({ Email: email });
-      toast.info("🔄 Mã OTP mới đã được gửi đến email của bạn!");
+
+      // ✅ Gọi API gửi lại mã OTP mới
+      const response = await fetch("http://localhost:5000/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Email: email }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
+      }
+
+      const result = await response.json();
+
+      toast.info(result.message || "🔄 Mã OTP mới đã được gửi đến email của bạn!");
+
+      // Reset 6 ô OTP & bắt đầu đếm ngược
+      setOtp(["", "", "", "", "", ""]);
       setResendTime(60);
     } catch (err) {
-      toast.error("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
+      toast.error(err.message || "Không thể gửi lại mã OTP, vui lòng thử lại sau!");
     } finally {
       setResending(false);
     }
@@ -77,14 +93,14 @@ export default function VerifyOtpPage() {
         Email: email,
         Otp: code,
       });
-      toast.success("✅ Xác thực OTP thành công!");
+      toast.success("Xác thực OTP thành công!");
       navigate("/login");
     } catch (err) {
       console.error(err);
       setShake(true);
       toast.error(
         err.response?.data?.message ||
-          "❌ Mã OTP không hợp lệ hoặc đã hết hạn!"
+          "Mã OTP không hợp lệ hoặc đã hết hạn!"
       );
       setTimeout(() => setShake(false), 500);
     } finally {
@@ -93,7 +109,6 @@ export default function VerifyOtpPage() {
   };
 
   return (
-    
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <form
         onSubmit={handleVerify}
@@ -120,6 +135,7 @@ export default function VerifyOtpPage() {
               maxLength={1}
               value={otp[i]}
               onChange={(e) => handleOtpChange(e, i)}
+              onFocus={(e) => e.target.select()}
               className="w-12 h-14 text-center border border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all duration-200"
             />
           ))}
@@ -139,12 +155,11 @@ export default function VerifyOtpPage() {
           {resendTime > 0 ? (
             <p>
               ⏳ Bạn có thể gửi lại mã sau{" "}
-              <span className="text-blue-600 font-semibold">
-                {resendTime}s
-              </span>
+              <span className="text-blue-600 font-semibold">{resendTime}s</span>
             </p>
           ) : (
             <button
+              type="button"
               onClick={handleResend}
               disabled={resending}
               className={clsx(
