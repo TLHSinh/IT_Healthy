@@ -63,7 +63,8 @@ builder.Services
 
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+            // IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
             ClockSkew = TimeSpan.Zero
         };
     });
@@ -71,6 +72,12 @@ builder.Services
 // 6️⃣ Token services
 builder.Services.AddScoped<UserTokenService, TokenService>();
 builder.Services.AddScoped<AdminTokenService, TokenService>();
+
+// ============================
+// Đăng ký Cloudinary Service
+// ============================
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddSingleton<CloudinaryService>();
 
 // 7️⃣ Xây dựng app
 var app = builder.Build();
