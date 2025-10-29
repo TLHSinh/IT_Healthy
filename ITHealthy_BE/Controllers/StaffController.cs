@@ -43,7 +43,6 @@ namespace ITHealthy.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // staff.HireDate = DateTime.Now;
             staff.IsActive = true;
 
             _context.Staff.Add(staff);
