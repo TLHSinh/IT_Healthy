@@ -43,7 +43,7 @@ namespace ITHealthy.Controllers
 
         // POST: api/customers
         [HttpPost]
-        public async Task<ActionResult<Customer>> Create([FromForm] CustomerCreateRequestDTO request)
+        public async Task<ActionResult<Customer>> Create([FromForm] CustomerRequestDTO request)
         {
             string? avatarUrl = null;
 
@@ -75,15 +75,34 @@ namespace ITHealthy.Controllers
 
         // PUT: api/customers/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromForm] Customer customer)
+        public async Task<IActionResult> Update(int id, [FromForm] CustomerRequestDTO request)
         {
-            if (id != customer.CustomerId)
-                return BadRequest();
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null)
+                return NotFound();
 
-            _context.Entry(customer).State = EntityState.Modified;
+            // Upload ảnh mới nếu có
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+            {
+                var avatarUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile);
+                customer.Avatar = avatarUrl;
+            }
+
+            // Cập nhật các trường
+            customer.FullName = request.FullName;
+            customer.Phone = request.Phone;
+            customer.Email = request.Email;
+            customer.PasswordHash = request.PasswordHash ?? customer.PasswordHash;
+            customer.Gender = request.Gender;
+            customer.Dob = request.DOB;
+            customer.RoleUser = request.RoleUser;
+            customer.IsActive = request.IsActive;
+
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            return Ok(customer);
         }
+
 
         // DELETE: api/customers/5
         [HttpDelete("{id}")]
