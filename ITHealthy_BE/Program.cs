@@ -77,6 +77,7 @@ builder.Services.AddScoped<AdminTokenService, TokenService>();
 // Đăng ký Cloudinary Service
 // ============================
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+// builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddScoped<CloudinaryService>();
 
 // 7️⃣ Xây dựng app

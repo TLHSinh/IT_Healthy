@@ -43,13 +43,13 @@ namespace ITHealthy.Controllers
 
         // POST: api/customers
         [HttpPost]
-        public async Task<ActionResult<Customer>> PostCustomer([FromForm] CustomerCreateRequestDTO request)
+        public async Task<ActionResult<Customer>> Create([FromForm] CustomerCreateRequestDTO request)
         {
             string? avatarUrl = null;
 
-            if (request.Avatar != null && request.Avatar.Length > 0)
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
             {
-                avatarUrl = await _cloudinaryService.UploadImageAsync(request.Avatar);
+                avatarUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile);
             }
 
             var customer = new Customer

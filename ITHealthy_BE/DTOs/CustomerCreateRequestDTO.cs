@@ -15,6 +15,6 @@ namespace ITHealthy.DTOs
         public bool IsActive { get; set; } = false;
 
         // File upload
-        public IFormFile? Avatar { get; set; }
+        public IFormFile? AvatarFile { get; set; }
     }
 }
