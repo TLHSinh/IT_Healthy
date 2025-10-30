@@ -98,7 +98,7 @@ export default function VerifyOtpPage() {
         Otp: code,
       });
       toast.success("Xác thực OTP thành công!");
-      navigate("/login");
+      navigate("/login-user");
     } catch (err) {
       console.error(err);
       setShake(true);

@@ -8,7 +8,7 @@ export default function HomePage() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/login-user");
   };
 
   return (
@@ -31,7 +31,7 @@ export default function HomePage() {
           </div>
         ) : (
           <Link
-            to="/login"
+            to="/login-user"
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
           >
             Đăng nhập
