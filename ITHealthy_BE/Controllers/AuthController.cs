@@ -155,9 +155,10 @@ namespace ITHealthy.Controllers
             return Ok(new { Message = "Đăng ký người dùng thành công" });
         }
 
-        //  Login
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDTO dto)
+        //Login
+        //  http://localhost:5000/api/auth/login-user
+        [HttpPost("login-user")]
+        public async Task<IActionResult> LoginUser([FromBody] LoginDTO dto)
         {
             var customer = await _context.Customers
                 .Include(u => u.RefreshTokens)
@@ -199,6 +200,15 @@ namespace ITHealthy.Controllers
                     //RedirectUrl = "/user/dashboard"
                 });
             }
+            return Unauthorized(new { Message = "Email không tồn tại trong hệ thống" });
+
+        }
+
+        //Login
+        //  http://localhost:5000/api/auth/login-admin
+        [HttpPost("login-admin")]
+        public async Task<IActionResult> LoginAdmin([FromBody] LoginDTO dto)
+        {
             var staff = await _context.Staff
                 .SingleOrDefaultAsync(s => s.Email == dto.Email);
 
