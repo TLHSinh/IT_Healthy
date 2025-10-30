@@ -324,7 +324,14 @@ namespace ITHealthy.Controllers
         }
 
         // ✅ Hash password (PBKDF2)
-        private string HashPassword(string password)
+        // chỉnh sửa lại hàm HashPassword 
+        // private string HashPassword(string password)
+        // {
+        //     using var sha = SHA256.Create();
+        //     var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
+        //     return Convert.ToBase64String(bytes);
+        // }
+        public static string HashPassword(string password)
         {
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
