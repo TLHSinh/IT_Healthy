@@ -33,12 +33,24 @@ services:
       - ithealthy_network
 
 
-  # ---------- FRONTEND ----------
-  frontend:
+  # ---------- FRONTEND (Client) ----------
+  frontend_user:
     build: ./ithealthy-fe
     container_name: ithealthy_frontend
     ports:
       - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ithealthy_network
+
+
+  # ---------- FRONTEND (Admin) ----------
+  frontend_admin:
+    build: ./admin-ithealthy-fe
+    container_name: admin_ithealthy_frontend
+    ports:
+      - "3001:80"
     depends_on:
       - backend
     networks:
