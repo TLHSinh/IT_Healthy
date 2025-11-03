@@ -373,7 +373,12 @@ public partial class ITHealthyDbContext : DbContext
             entity.Property(e => e.Calories).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Carbs).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.CategoriesIngredientsId).HasColumnName("CategoriesIngredientsID");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
             entity.Property(e => e.Fat).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ImageIngredient).HasMaxLength(255);
+            entity.Property(e => e.IsAvailable).HasDefaultValue(true);
             entity.Property(e => e.IngredientName).HasMaxLength(100);
             entity.Property(e => e.Protein).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Unit).HasMaxLength(20);
