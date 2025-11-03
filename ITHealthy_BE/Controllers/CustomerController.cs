@@ -44,7 +44,7 @@ namespace ITHealthy.Controllers
 
         // POST: api/customers
         [HttpPost]
-        public async Task<ActionResult<Customer>> Create([FromForm] CustomerRequestDTO request)
+        public async Task<ActionResult<Customer>> CreateCustomer([FromForm] CustomerRequestDTO request)
         {
             var errors = new List<string>();
 
@@ -58,9 +58,9 @@ namespace ITHealthy.Controllers
                 return BadRequest(new { messages = errors });
 
             string? avatarUrl = null;
-            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+            if (request.Avatar != null && request.Avatar.Length > 0)
             {
-                avatarUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile);
+                avatarUrl = await _cloudinaryService.UploadImageAsync(request.Avatar);
             }
 
             var hashedPassword = AuthController.HashPassword(request.PasswordHash);
@@ -108,9 +108,9 @@ namespace ITHealthy.Controllers
             if (errors.Count > 0)
                 return BadRequest(new { messages = errors });
 
-            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+            if (request.Avatar != null && request.Avatar.Length > 0)
             {
-                var avatarUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile);
+                var avatarUrl = await _cloudinaryService.UploadImageAsync(request.Avatar);
                 customer.Avatar = avatarUrl;
             }
 

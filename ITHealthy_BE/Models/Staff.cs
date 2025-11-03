@@ -28,4 +28,5 @@ public partial class Staff
     public bool? IsActive { get; set; }
 
     public virtual Store? Store { get; set; }
+
 }

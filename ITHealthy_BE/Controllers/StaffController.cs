@@ -19,17 +19,45 @@ namespace ITHealthy.Controllers
 
         // GET: api/staffs
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllStaffs()
         {
-            var staffs = await _context.Staff.ToListAsync();
+            var staffs = await _context.Staff
+                .Include(s => s.Store) // 🔹 lấy kèm thông tin cửa hàng
+                .Select(s => new
+                {
+                    s.StaffId,
+                    s.FullName,
+                    s.Email,
+                    s.Phone,
+                    s.RoleStaff,
+                    s.IsActive,
+                    StoreName = s.Store != null ? s.Store.StoreName : null
+                })
+                .ToListAsync();
+
             return Ok(staffs);
         }
 
+
         // GET: api/staffs/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetStaffById(int id)
         {
-            var staff = await _context.Staff.FindAsync(id);
+            var staff = await _context.Staff
+        .Include(s => s.Store)
+        .Where(s => s.StaffId == id)
+        .Select(s => new
+        {
+            s.StaffId,
+            s.FullName,
+            s.Email,
+            s.Phone,
+            s.RoleStaff,
+            s.IsActive,
+            StoreName = s.Store != null ? s.Store.StoreName : null
+        })
+        .FirstOrDefaultAsync();
+
             if (staff == null)
                 return NotFound(new { message = "Không tìm thấy nhân viên!" });
 
@@ -66,71 +94,51 @@ namespace ITHealthy.Controllers
             });
         }
         // // PUT: api/staffs/5
-        // [HttpPut("{id}")]
-        // public async Task<IActionResult> Update(int id, [FromBody] Staff updatedStaff)
-        // {
-        //     var staff = await _context.Staff.FindAsync(id);
-        //     if (staff == null)
-        //         return NotFound(new { message = "Không tìm thấy nhân viên!" });
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] Staff updatedStaff)
+        {
+            var staff = await _context.Staff.FindAsync(id);
+            if (staff == null)
+                return NotFound(new { message = "Không tìm thấy nhân viên!" });
 
-        //     staff.StoreId = updatedStaff.StoreId;
-        //     staff.FullName = updatedStaff.FullName;
-        //     staff.Phone = updatedStaff.Phone;
-        //     staff.Email = updatedStaff.Email;
-        //     staff.Gender = updatedStaff.Gender;
-        //     staff.Dob = updatedStaff.Dob;
-        //     staff.RoleStaff = updatedStaff.RoleStaff;
-        //     staff.PasswordHash = updatedStaff.PasswordHash;
-        //     staff.IsActive = updatedStaff.IsActive;
+            var errors = new List<string>();
 
-        //     await _context.SaveChangesAsync();
-        //     return Ok(new { message = "Cập nhật thông tin thành công!", data = staff });
-        // }
-[HttpPut("{id}")]
-public async Task<IActionResult> Update(int id, [FromBody] Staff updatedStaff)
-{
-    var staff = await _context.Staff.FindAsync(id);
-    if (staff == null)
-        return NotFound(new { message = "Không tìm thấy nhân viên!" });
+            // 🔹 Kiểm tra trùng Email (trừ chính nhân viên đang update)
+            if (await _context.Staff.AnyAsync(s => s.Email == updatedStaff.Email && s.StaffId != id))
+                errors.Add("Email đã tồn tại trong hệ thống.");
 
-    var errors = new List<string>();
+            // 🔹 Kiểm tra trùng SĐT
+            if (await _context.Staff.AnyAsync(s => s.Phone == updatedStaff.Phone && s.StaffId != id))
+                errors.Add("Số điện thoại đã tồn tại trong hệ thống.");
 
-    // 🔹 Kiểm tra trùng Email (trừ chính nhân viên đang update)
-    if (await _context.Staff.AnyAsync(s => s.Email == updatedStaff.Email && s.StaffId != id))
-        errors.Add("Email đã tồn tại trong hệ thống.");
+            if (errors.Count > 0)
+                return BadRequest(new { messages = errors });
 
-    // 🔹 Kiểm tra trùng SĐT
-    if (await _context.Staff.AnyAsync(s => s.Phone == updatedStaff.Phone && s.StaffId != id))
-        errors.Add("Số điện thoại đã tồn tại trong hệ thống.");
+            // 🔹 Cập nhật thông tin
+            staff.StoreId = updatedStaff.StoreId;
+            staff.FullName = updatedStaff.FullName;
+            staff.Phone = updatedStaff.Phone;
+            staff.Email = updatedStaff.Email;
+            staff.Gender = updatedStaff.Gender;
+            staff.Dob = updatedStaff.Dob;
+            staff.RoleStaff = updatedStaff.RoleStaff;
+            staff.IsActive = updatedStaff.IsActive;
 
-    if (errors.Count > 0)
-        return BadRequest(new { messages = errors });
+            // 🔹 Mã hoá lại mật khẩu nếu có thay đổi
+            if (!string.IsNullOrEmpty(updatedStaff.PasswordHash) &&
+                updatedStaff.PasswordHash != staff.PasswordHash)
+            {
+                staff.PasswordHash = AuthController.HashPassword(updatedStaff.PasswordHash);
+            }
 
-    // 🔹 Cập nhật thông tin
-    staff.StoreId = updatedStaff.StoreId;
-    staff.FullName = updatedStaff.FullName;
-    staff.Phone = updatedStaff.Phone;
-    staff.Email = updatedStaff.Email;
-    staff.Gender = updatedStaff.Gender;
-    staff.Dob = updatedStaff.Dob;
-    staff.RoleStaff = updatedStaff.RoleStaff;
-    staff.IsActive = updatedStaff.IsActive;
+            await _context.SaveChangesAsync();
 
-    // 🔹 Mã hoá lại mật khẩu nếu có thay đổi
-    if (!string.IsNullOrEmpty(updatedStaff.PasswordHash) &&
-        updatedStaff.PasswordHash != staff.PasswordHash)
-    {
-        staff.PasswordHash = AuthController.HashPassword(updatedStaff.PasswordHash);
-    }
-
-    await _context.SaveChangesAsync();
-
-    return Ok(new
-    {
-        message = "Cập nhật thông tin thành công!",
-        data = staff
-    });
-}
+            return Ok(new
+            {
+                message = "Cập nhật thông tin thành công!",
+                data = staff
+            });
+        }
         // DELETE: api/staffs/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
