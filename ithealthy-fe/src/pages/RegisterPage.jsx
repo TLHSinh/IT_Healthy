@@ -259,7 +259,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-gray-500 text-sm mt-5">
             Đã có tài khoản?{" "}
-            <Link to="/login" className="text-green-600 font-medium">
+            <Link to="/login-user" className="text-green-600 font-medium">
               Đăng nhập
             </Link>
           </p>

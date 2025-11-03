@@ -2,7 +2,7 @@ using ITHealthy.Data;
 using ITHealthy.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using BCrypt.Net;
 
 namespace ITHealthy.Controllers
 {
@@ -143,6 +143,35 @@ public async Task<IActionResult> Update(int id, [FromBody] Staff updatedStaff)
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Xóa nhân viên thành công!" });
+        }
+
+        [HttpPost("create-admin")]
+        public async Task<IActionResult> CreateAdmin()
+        {
+            // Kiểm tra nếu admin đã tồn tại
+            var existAdmin = await _context.Staff.FirstOrDefaultAsync(s => s.Email == "admin@example.com");
+            if (existAdmin != null)
+            {
+                return BadRequest(new { message = "Admin đã tồn tại!" });
+            }
+
+            var admin = new Staff
+            {
+                StoreId = 1,
+                FullName = "Quản trị viên",
+                Phone = "0909000000",
+                Email = "admin@example.com",
+                Gender = "Khác",
+                Dob = new DateOnly(1990, 1, 1),
+                RoleStaff = "Admin",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                IsActive = true
+            };
+
+            _context.Staff.Add(admin);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tạo tài khoản Admin thành công!", data = admin });
         }
     }
 }

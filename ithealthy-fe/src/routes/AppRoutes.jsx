@@ -29,7 +29,7 @@ export default function AppRoutes() {
         </Route>
 
         {/* Trang không có Navbar */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login-user" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
       </Routes>

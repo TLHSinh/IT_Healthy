@@ -23,6 +23,12 @@ public partial class Ingredient
 
     public decimal? Fat { get; set; }
 
+    public string? ImageIngredient { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+
+    public bool? IsAvailable { get; set; }
+
     public virtual ICollection<BowlItem> BowlItems { get; set; } = new List<BowlItem>();
 
     public virtual CategoriesIngredient? CategoriesIngredients { get; set; }

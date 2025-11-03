@@ -20,7 +20,7 @@ axiosInstance.interceptors.request.use(
 );
 
 export const authApi = {
-  login: (data) => axiosInstance.post(`/login`, data),
+  login: (data) => axiosInstance.post(`/login-user`, data),
   register: (data) => axiosInstance.post(`/register`, data),
   verifyOtp: (data) => axiosInstance.post(`/verify-otp`, data),
 };

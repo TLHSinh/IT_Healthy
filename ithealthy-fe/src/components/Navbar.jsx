@@ -1,22 +1,32 @@
-import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useContext } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
+import { AuthContext } from "../context/AuthContext";
+import { CircleUserRound, LogIn, LogOut, User } from "lucide-react";
 
-const Navbar = () => {
+const Navbar = ({ onSubmenuToggle }) => {
   const [activeMenu, setActiveMenu] = useState(null);
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ Lấy đường dẫn hiện tại
+  const location = useLocation();
+  const { user, logout } = useContext(AuthContext);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login-user");
+  };
 
   const handleMenuClick = (menu) => {
     if (menu === "menu") {
-      setActiveMenu((prev) => (prev === "menu" ? null : "menu"));
+      const newState = activeMenu === "menu" ? null : "menu";
+      setActiveMenu(newState);
+      onSubmenuToggle?.(newState === "menu");
     } else {
       setActiveMenu(null);
+      onSubmenuToggle?.(false);
     }
   };
 
-  // ✅ Hàm check active theo đường dẫn
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname.startsWith(path);
 
   return (
     <div className="navbar-wrapper">
@@ -70,14 +80,20 @@ const Navbar = () => {
               </li>
 
               <li
-                className={`nav-item ${activeMenu === "menu" ? "active" : ""}`}
+                className={`nav-item ${
+                  isActive("/signature-bowls") ||
+                  isActive("/createyourbowl") ||
+                  isActive("/BowlPlanner")
+                    ? "active"
+                    : ""
+                }`}
               >
                 <a
                   href="/menu"
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate("/signature-bowls"); // chuyển hướng ngay
-                    handleMenuClick("menu"); // mở submenu
+                    navigate("/signature-bowls");
+                    handleMenuClick("menu");
                   }}
                 >
                   Our bowls
@@ -98,21 +114,6 @@ const Navbar = () => {
                   About us
                 </a>
               </li>
-
-              {/* <li
-                className={`nav-item ${isActive("/catering") ? "active" : ""}`}
-              >
-                <a
-                  href="/catering"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/catering");
-                    setActiveMenu(null);
-                  }}
-                >
-                  Catering
-                </a>
-              </li> */}
 
               <li className={`nav-item ${isActive("/stores") ? "active" : ""}`}>
                 <a
@@ -139,6 +140,8 @@ const Navbar = () => {
                   Blogs
                 </a>
               </li>
+
+              {/* Ngôn ngữ */}
               <li className="lang-item">
                 <a href="#vi" onClick={(e) => e.preventDefault()}>
                   <span className="lang-flag">
@@ -152,6 +155,27 @@ const Navbar = () => {
               </li>
             </ul>
           </nav>
+
+          {/* Đăng nhập / Đăng xuất icon */}
+          <div className="navbar-auth">
+            {user ? (
+              <button
+                className="auth-btn"
+                onClick={handleLogout}
+                title="Đăng xuất"
+              >
+                <LogOut size={22} color="#00B389" />
+              </button>
+            ) : (
+              <button
+                className="auth-btn"
+                onClick={() => navigate("/login-user")}
+                title="Đăng nhập"
+              >
+                <CircleUserRound size={28} color="#00B389" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -192,7 +216,7 @@ const Navbar = () => {
               </li>
               <li
                 className={`submenu-item ${
-                  isActive("/menu/BowlPlanner") ? "active" : ""
+                  isActive("/BowlPlanner") ? "active" : ""
                 }`}
               >
                 <a
