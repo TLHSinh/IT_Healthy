@@ -9,5 +9,13 @@ namespace ITHealthy.DTOs
         public string? DescriptionProduct { get; set; }
         public string? ImageProduct { get; set; }
         public string? CategoryName { get; set; }
+        public decimal? Calories { get; set; }
+
+        public decimal? Protein { get; set; }
+
+        public decimal? Carbs { get; set; }
+
+        public decimal? Fat { get; set; }
+
     }
 }

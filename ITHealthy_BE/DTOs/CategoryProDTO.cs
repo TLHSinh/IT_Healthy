@@ -8,5 +8,7 @@ namespace ITHealthy.DTOs
 
         public string? DescriptionCat { get; set; }
 
+        public string? ImageCategories { get; set; }
+
     }
 }

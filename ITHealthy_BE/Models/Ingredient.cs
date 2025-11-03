@@ -23,7 +23,7 @@ public partial class Ingredient
 
     public decimal? Fat { get; set; }
 
-    public string? ImageIngredient { get; set; }
+    public string? ImageIngredients { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -31,7 +31,11 @@ namespace ITHealthy.Controllers
                     IsAvailable = p.IsAvailable,
                     DescriptionProduct = p.DescriptionProduct,
                     ImageProduct = p.ImageProduct,
-                    CategoryName = p.Category != null ? p.Category.CategoryName : null
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    Calories = p.Calories,
+                    Protein = p.Protein,
+                    Carbs = p.Carbs,
+                    Fat = p.Fat
                 })
                 .ToListAsync();
 
@@ -53,7 +57,12 @@ namespace ITHealthy.Controllers
                     IsAvailable = p.IsAvailable,
                     DescriptionProduct = p.DescriptionProduct,
                     ImageProduct = p.ImageProduct,
-                    CategoryName = p.Category != null ? p.Category.CategoryName : null
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    Calories = p.Calories,
+                    Protein = p.Protein,
+                    Carbs = p.Carbs,
+                    Fat = p.Fat
+
                 })
                 .FirstOrDefaultAsync();
 

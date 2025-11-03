@@ -19,14 +19,6 @@ export default function MenuPage() {
       .catch((err) => console.error("Error fetching products:", err));
   }, []);
 
-  // Ảnh banner mẫu cho từng loại category (tuỳ chỉnh theo dữ liệu thực tế)
-  const bannerImages = {
-    "Ít calo": "https://soumaki.com.vn/wp-content/uploads/2024/03/L1.png",
-    "Cân bằng": "https://soumaki.com.vn/wp-content/uploads/2024/03/B1.png",
-    "Giàu đạm": "https://soumaki.com.vn/wp-content/uploads/2024/03/H1.png",
-    Chay: "https://soumaki.com.vn/wp-content/uploads/2024/03/V1.png",
-  };
-
   // 🟢 Hàm cuộn đến phần tương ứng
   const scrollToCategory = (categoryId) => {
     const ref = sectionRefs.current[categoryId];
@@ -77,113 +69,120 @@ export default function MenuPage() {
               ref={sectionRefs.current[cat.categoryId]}
               className="scroll-mt-24"
             >
-              {/* Banner từng category */}
-              <div className="relative rounded-3xl overflow-hidden shadow-md mb-8">
-                <img
-                  src={
-                    bannerImages[cat.categoryName] || bannerImages["Ít calo"]
-                  }
-                  alt={cat.categoryName}
-                  className="w-full h-72 object-cover brightness-90"
-                />
-                <div className="absolute inset-0 bg-black/30 flex flex-col justify-center items-center text-center text-white">
-                  <h2 className="text-4xl font-bold mb-2">
-                    {cat.categoryName}
-                  </h2>
-                  <p className="max-w-2xl text-lg">{cat.descriptionCat}</p>
+              {/* Lưới chứa cả banner và sản phẩm */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Banner là 1 “card” lớn chiếm 1/2 hàng đầu tiên */}
+                <div className="group relative rounded-3xl overflow-hidden shadow-md lg:col-span-2 transition-all duration-500 hover:shadow-xl">
+                  <img
+                    src={
+                      cat.imageCategories ||
+                      "https://soumaki.com.vn/wp-content/uploads/2024/03/default-banner.png"
+                    } // ảnh fallback nếu không có
+                    alt={cat.categoryName}
+                    className="w-full h-full object-cover brightness-90 transition-transform duration-500 group-hover:scale-105 group-hover:brightness-110"
+                  />
+                  <div className="absolute inset-0 bg-black/30 flex flex-col justify-center items-center text-center text-white transition-all duration-500 group-hover:bg-black/20">
+                    <h2 className="text-4xl font-bold mb-2 drop-shadow-lg">
+                      {cat.categoryName}
+                    </h2>
+                    <p className="max-w-2xl text-lg">{cat.descriptionCat}</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Danh sách sản phẩm */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {/* Các sản phẩm */}
                 {filteredProducts.map((p) => (
                   <div
                     key={p.productId}
-                    className="relative flex flex-col items-center bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
+                    className="group relative flex flex-col items-center bg-[#fff8f0] rounded-3xl p-5 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
                   >
-                    {/* Icon yêu thích */}
+                    {/* ❤️ Icon yêu thích */}
                     <div
-                      className="absolute top-3 left-3 rounded-full p-2"
+                      className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full"
                       style={{ backgroundColor: "#ff623e", color: "#f5edd8" }}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="currentColor"
                         viewBox="0 0 24 24"
-                        className="w-5 h-5"
+                        className="w-6 h-6"
                       >
                         <path
-                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 
-          3.5 4 5.5 4c1.54 0 3.04.99 
-          3.57 2.36h1.87C13.46 4.99 14.96 4 16.5 
-          4 18.5 4 20 6 20 8.5c0 3.78-3.4 
-          6.86-8.55 11.54L12 21.35z"
+                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
+      2 6 3.5 4 5.5 4c1.54 0 3.04.99 3.57 2.36h1.87C13.46 4.99 
+      14.96 4 16.5 4 18.5 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 
+      11.54L12 21.35z"
                         />
                       </svg>
                     </div>
 
-                    {/* Ảnh sản phẩm */}
-                    <div className="relative w-full flex justify-center bg-[#f9f9f9]">
+                    {/* Ảnh sản phẩm có hiệu ứng hover */}
+                    <div className="relative w-full flex justify-center mb-4">
                       <img
                         src={p.imageProduct}
                         alt={p.productName}
-                        className="w-60 h-60 object-contain drop-shadow-md transition-transform duration-300 hover:scale-105"
-                        loading="lazy"
-                      />
-                      {/* Hiệu ứng shadow dưới ảnh */}
-                      <img
-                        src="https://soumaki.com.vn/wp-content/uploads/2024/03/Shadow.svg"
-                        alt=""
-                        className="absolute bottom-0 w-2/3 opacity-70"
+                        className=" group-hover:drop-shadow-2xl w-56 h-56 object-contain drop-shadow-md rounded-full bg-white p-4 transform transition-transform duration-500 group-hover:-translate-y-3 group-hover:scale-110"
                       />
                     </div>
 
-                    {/* Nội dung */}
-                    <div className="p-4 text-center space-y-2">
-                      <h3 className="text-xl font-semibold text-gray-800">
+                    {/* Tên & Calories */}
+                    <div className="flex justify-between items-center w-full mb-2">
+                      <h3 className="text-xl font-bold text-[#3E0D1C]">
                         {p.productName}
                       </h3>
-
-                      <p className="text-sm text-gray-500 line-clamp-2">
-                        {p.descriptionProduct}
-                      </p>
-
-                      {p.basePrice && (
-                        <p className="text-[#ff623e] font-semibold text-base">
-                          {p.basePrice.toLocaleString()}₫
-                        </p>
+                      {p.calories && (
+                        <span className="text-sm font-semibold text-[#3E0D1C] border border-[#3E0D1C] rounded-full px-3 py-1">
+                          {p.calories} CALORIES
+                        </span>
                       )}
-
-                      {/* Dữ liệu dinh dưỡng — chỉ hiện nếu có */}
-                      {p.protein && (
-                        <div className="flex justify-center gap-4 text-gray-700 font-medium mt-2">
-                          <div>
-                            {p.protein}{" "}
-                            <span className="text-gray-500 text-sm">
-                              PROTEIN
-                            </span>
-                          </div>
-                          <div>
-                            {p.carbs}{" "}
-                            <span className="text-gray-500 text-sm">CARBS</span>
-                          </div>
-                          <div>
-                            {p.fat}{" "}
-                            <span className="text-gray-500 text-sm">FAT</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Nút tải công thức (nếu bạn có API tương tự) */}
-                      <button
-                        onClick={() =>
-                          alert(`Tải công thức cho ${p.productName}`)
-                        }
-                        className="mt-4 px-6 py-2 bg-[#ff623e] text-white font-semibold rounded-full shadow hover:bg-[#e55734] transition-all"
-                      >
-                        Download Recipe
-                      </button>
                     </div>
+
+                    {/* Mô tả */}
+                    <p className="text-gray-700 text-sm mb-3 text-center min-h-[40px]">
+                      {p.descriptionProduct}
+                    </p>
+
+                    <div
+                      className="w-full h-[2px] mb-1"
+                      style={{
+                        backgroundImage:
+                          "radial-gradient(currentColor 2.5px, transparent 2px)",
+                        backgroundSize: "10px 4px",
+                        backgroundRepeat: "repeat-x",
+                        color: "#928e8eff", // tương đương text-gray-400
+                      }}
+                    ></div>
+
+                    {/* Dữ liệu dinh dưỡng */}
+                    <div className="flex justify-around w-full text-[#3E0D1C] font-semibold mb-4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg">{p.protein || 0}</span>
+                        <span className="text-xs tracking-wide text-gray-500">
+                          PROTEIN
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg">{p.carbs || 0}</span>
+                        <span className="text-xs tracking-wide text-gray-500">
+                          CARBS
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg">{p.fat || 0}</span>
+                        <span className="text-xs tracking-wide text-gray-500">
+                          FAT
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Nút tải công thức */}
+                    <button
+                      onClick={() =>
+                        alert(`Tải công thức cho ${p.productName}`)
+                      }
+                      className="w-full py-2 bg-[#ff623e] text-white font-semibold rounded-full hover:bg-[#e55734] transition-all"
+                    >
+                      Download recipe
+                    </button>
                   </div>
                 ))}
 

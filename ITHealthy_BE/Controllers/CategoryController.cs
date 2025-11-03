@@ -28,7 +28,8 @@ namespace ITHealthy.Controllers
                 {
                     CategoryId = p.CategoryId,
                     CategoryName = p.CategoryName,
-                    DescriptionCat = p.DescriptionCat
+                    DescriptionCat = p.DescriptionCat,
+                    ImageCategories = p.ImageCategories
                 })
                 .ToListAsync();
             return Ok(category_pro);
