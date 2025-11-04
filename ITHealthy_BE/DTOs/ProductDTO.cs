@@ -3,6 +3,7 @@ namespace ITHealthy.DTOs
     public class ProductDTO
     {
         public int ProductId { get; set; }
+        public int? CategoryId { get; set; }
         public string ProductName { get; set; } = null!;
         public decimal? BasePrice { get; set; }
         public bool? IsAvailable { get; set; }
@@ -16,6 +17,8 @@ namespace ITHealthy.DTOs
         public decimal? Carbs { get; set; }
 
         public decimal? Fat { get; set; }
+
+        public IFormFile? ImageFile { get; set; }
 
     }
 }

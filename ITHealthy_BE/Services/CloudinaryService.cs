@@ -6,9 +6,9 @@ namespace ITHealthy.Services
 {
     public class CloudinarySettings
     {
-        public string CloudName { get; set; }
-        public string ApiKey { get; set; }
-        public string ApiSecret { get; set; }
+        public required string CloudName { get; set; }
+        public required string ApiKey { get; set; }
+        public required string ApiSecret { get; set; }
     }
 
     public class CloudinaryService
@@ -25,7 +25,7 @@ namespace ITHealthy.Services
             _cloudinary = new Cloudinary(acc);
         }
 
-        public async Task<string> UploadImageAsync(IFormFile file)
+        public async Task<string?> UploadImageAsync(IFormFile file)
         {
             if (file == null || file.Length == 0) return null;
 
@@ -38,5 +38,20 @@ namespace ITHealthy.Services
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
             return uploadResult.SecureUrl?.AbsoluteUri;
         }
+
+        public async Task<string?> UploadImageProductAsync(IFormFile file, string folder = "products_images")
+        {
+            if (file == null || file.Length == 0) return null;
+
+            var uploadParams = new ImageUploadParams()
+            {
+                File = new FileDescription(file.FileName, file.OpenReadStream()),
+                Folder = folder
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            return uploadResult.SecureUrl?.AbsoluteUri;
+        }
+
     }
 }
