@@ -7,8 +7,10 @@ import {
   Store,
   ChevronDown,
   ChevronUp,
+  Package,
 } from "lucide-react";
 import HELogo from "../../assets/HE.png";
+
 
 const AdminSidebar = ({ isOpen }) => {
   const navigate = useNavigate();
@@ -137,6 +139,20 @@ const AdminSidebar = ({ isOpen }) => {
         >
           <Store size={20} />
           {isOpen && <span>Quản lý Cửa hàng</span>}
+        </NavLink>
+
+         <NavLink
+          to="/admin/products"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              isActive
+                ? "bg-orange-100 text-orange-600 font-semibold"
+                : "text-gray-700 hover:bg-orange-50"
+            }`
+          }
+        >
+          <Package size={20} />
+          {isOpen && <span>Quản lý Sản Phẩm</span>}
         </NavLink>
       </nav>
 

@@ -126,34 +126,44 @@ const StaffManagement = () => {
   };
 
   const handleSave = async (payload, isNew) => {
-    try {
-      const formatted = {
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        roleStaff: payload.roleStaff,
-        isActive: payload.isActive ?? true,
-        hireDate: payload.hireDate || new Date().toISOString(),
-        storeId: payload.storeId,
-        PasswordHash: payload.password || "",
-      };
+  try {
+    const formatted = {
+      fullName: payload.fullName,
+      email: payload.email,
+      phone: payload.phone,
+      roleStaff: payload.roleStaff,
+      isActive: payload.isActive ?? true,
+      hireDate: payload.hireDate || new Date().toISOString(),
+      storeId: payload.storeId,
+      PasswordHash: payload.password || "",
+    };
 
-      if (isNew) {
-        await adminApi.createStaff(formatted);
-        toast.success("Tạo nhân viên thành công!");
-      } else {
-        const id = payload.staffId;
-        await adminApi.updateStaff(id, formatted);
-        toast.success("Cập nhật nhân viên thành công!");
-      }
-
-      setIsModalOpen(false);
-      fetchStaffs();
-    } catch (err) {
-      toast.error(err.response?.data?.messages?.join("\n") || "Lưu thất bại");
-      throw err;
+    if (isNew) {
+      await adminApi.createStaff(formatted);
+      toast.success("Tạo nhân viên thành công!");
+    } else {
+      await adminApi.updateStaff(payload.staffId, formatted);
+      toast.success("Cập nhật nhân viên thành công!");
     }
-  };
+
+    setIsModalOpen(false);
+    fetchStaffs();
+
+    return { success: true }; // trả về thành công
+  } catch (err) {
+    const messages =
+      err.response?.data?.messages?.length
+        ? err.response.data.messages
+        : err.response?.data?.message
+        ? [err.response.data.message]
+        : ["Lưu thất bại"];
+
+    messages.forEach((msg) => toast.error(msg));
+
+    return { success: false, errors: messages }; // trả về lỗi, KHÔNG throw nữa
+  }
+};
+
 
   return (
     <div >

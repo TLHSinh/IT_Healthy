@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import StoreModal from "../../components/admin/StoreModal";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+
 
 const PAGE_SIZE = 8;
 
@@ -18,6 +20,8 @@ const StoreManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentStore, setCurrentStore] = useState(null);
   const [page, setPage] = useState(1);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+const [storeToDelete, setStoreToDelete] = useState(null);
 
   // 🔹 Lấy danh sách cửa hàng
   const fetchStores = async () => {
@@ -52,29 +56,31 @@ const StoreManagement = () => {
   };
 
   // 🔹 Xóa
-  const handleDelete = async (store) => {
-    const id = store.storeId || store.StoreId;
-    if (!id) {
-      toast.error("Không xác định được ID cửa hàng!");
-      return;
-    }
+  const handleDelete = async () => {
+  if (!storeToDelete) return;
+  const id = storeToDelete.storeId || storeToDelete.StoreId;
 
-    const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xóa cửa hàng "${store.storeName}" không?`
-    );
-    if (!confirmDelete) return;
+  try {
+    await adminApi.deleteStore(id);
+    toast.success("Đã xóa cửa hàng thành công!");
+    // Cập nhật danh sách mà không cần reload toàn bộ
+    setStores((prev) => prev.filter((s) => (s.storeId || s.StoreId) !== id));
+  } catch (err) {
+    console.error("Lỗi khi xóa:", err);
 
-    try {
-      const result = await adminApi.deleteStore(id);
-      if (result) {
-        toast.success("🗑️ Đã xóa cửa hàng thành công!");
-        await fetchStores();
-      }
-    } catch (err) {
-      console.error("❌ Lỗi khi xóa:", err);
-      toast.error("Không thể xóa cửa hàng!");
+    const msg = err?.response?.data?.message || err.message || "Không thể xóa cửa hàng!";
+
+    // Nếu lỗi do còn nhân viên
+    if (msg.toLowerCase().includes("nhân viên") || msg.toLowerCase().includes("employee")) {
+      toast.error("Không thể xóa cửa hàng vì vẫn còn nhân viên thuộc biên chế!");
+    } else {
+      toast.error(msg);
     }
-  };
+  } finally {
+    setConfirmOpen(false);
+    setStoreToDelete(null);
+  }
+};
 
   // --- Xử lý phân trang ---
   const totalPages = Math.ceil(stores.length / PAGE_SIZE);
@@ -190,7 +196,10 @@ const StoreManagement = () => {
                         <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(store)}
+                        onClick={() => {
+                          setStoreToDelete(store);
+                          setConfirmOpen(true);
+                        }}
                         className="p-2 rounded-lg hover:bg-red-50 text-red-600"
                         title="Xóa"
                       >
@@ -235,6 +244,19 @@ const StoreManagement = () => {
         </div>
       )}
 
+      {confirmOpen && storeToDelete && (
+      <ConfirmDialog
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa cửa hàng "${storeToDelete.storeName}"?`}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setStoreToDelete(null);
+        }}
+        onConfirm={handleDelete}
+      />
+    )}
+
+
       {/* Modal */}
       {modalOpen && (
         <StoreModal
@@ -245,6 +267,7 @@ const StoreManagement = () => {
         />
       )}
     </div>
+    
   );
 };
 
