@@ -11,5 +11,7 @@ public partial class CategoriesIngredient
 
     public string? DescriptionCat { get; set; }
 
+    public string? ImageCategories { get; set; }
+
     public virtual ICollection<Ingredient> Ingredients { get; set; } = new List<Ingredient>();
 }

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 
-namespace YourNamespace.Controllers
+namespace ITHealthy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -27,7 +27,7 @@ namespace YourNamespace.Controllers
 
         // ✅ Lấy cửa hàng theo ID
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetStoreById(int id)
+        public async Task<IActionResult> GetByIdStore(int id)
         {
             var store = await _context.Stores.FindAsync(id);
             if (store == null)
@@ -42,6 +42,8 @@ namespace YourNamespace.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+            
+            model.IsActive = true;
             _context.Stores.Add(model);
             await _context.SaveChangesAsync();
 
@@ -68,7 +70,7 @@ namespace YourNamespace.Controllers
             store.Longitude = model.Longitude;
             store.GooglePlaceId = model.GooglePlaceId;
             store.Rating = model.Rating;
-            store.DateJoined = model.DateJoined;  // người dùng nhập
+            store.DateJoined = model.DateJoined;
             store.IsActive = model.IsActive;
 
             await _context.SaveChangesAsync();

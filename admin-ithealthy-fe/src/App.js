@@ -9,6 +9,8 @@ import StaffManagement from "./pages/admin/StaffManagement";
 import StoreManagement from "./pages/admin/StoreManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import ProductManagement from "./pages/admin/ProductManagement";
+import CategoryManagement from "./pages/admin/CategoryManagement";
+import CategoryIngManagement from "./pages/admin/CategoryIngManagement";
 
 import AdminLayout from "./layouts/AdminLayout";
 
@@ -38,6 +40,8 @@ function App() {
           <Route path="/admin/stores" element={<StoreManagement />} />
           <Route path="/admin/users" element={<UsersManagement />} />
           <Route path="/admin/products" element={<ProductManagement />} />
+          <Route path="/admin/category" element={<CategoryManagement />} />
+          <Route path="/admin/category-ing" element={<CategoryIngManagement />} />
         </Route>
       </Routes>
     </Router>

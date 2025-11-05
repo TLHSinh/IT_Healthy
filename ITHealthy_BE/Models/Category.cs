@@ -11,6 +11,8 @@ public partial class Category
 
     public string? DescriptionCat { get; set; }
 
+    public string? ImageCategories { get; set; }
+
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 
     public virtual ICollection<PromotionCategory> PromotionCategories { get; set; } = new List<PromotionCategory>();

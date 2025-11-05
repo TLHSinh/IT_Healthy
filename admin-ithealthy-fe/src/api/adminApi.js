@@ -239,63 +239,63 @@ deleteCustomer: async (id) => {
 },
 
   // ====================== 🛒 SẢN PHẨM ======================
-  getAllProducts: () =>
+ getAllProducts: () =>
     axios.get(`${BASE}/products/all-products`, { headers: headers() }),
 
+  // Lấy sản phẩm theo ID
   getProductById: (id) =>
     axios.get(`${BASE}/products/${id}`, { headers: headers() }),
 
+  // Thêm sản phẩm
   createProduct: async (payload) => {
     try {
-      const formatted = {
-        name: payload.name,
-        price: payload.price,
-        description: payload.description || "",
-        category: payload.category || "",
-        stock: payload.stock ?? 0,
-        isActive: payload.isActive ?? true,
-        imageUrl: payload.imageUrl || "",
-      };
-      const res = await axios.post(`${BASE}/products`, formatted, { headers: headers() });
+      const res = await axios.post(`${BASE}/products/add`, payload, {
+        headers: {
+          ...headers(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
       return res.data;
     } catch (err) {
       const msg =
-        err.response?.data?.messages?.join("\n") ||
-        err.response?.data?.message ||
-        "❌ Tạo sản phẩm thất bại";
+        err.response?.data?.message || "❌ Tạo sản phẩm thất bại!";
       throw new Error(msg);
     }
   },
 
+  // Cập nhật sản phẩm
   updateProduct: async (id, payload) => {
     try {
-      const formatted = {
-        name: payload.name,
-        price: payload.price,
-        description: payload.description || "",
-        category: payload.category || "",
-        stock: payload.stock ?? 0,
-        isActive: payload.isActive ?? true,
-        imageUrl: payload.imageUrl || "",
-      };
-      const res = await axios.put(`${BASE}/products/${id}`, formatted, { headers: headers() });
+      const res = await axios.put(`${BASE}/products/update/${id}`, payload, {
+        headers: {
+          ...headers(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
       return res.data;
     } catch (err) {
       const msg =
-        err.response?.data?.messages?.join("\n") ||
-        err.response?.data?.message ||
-        "❌ Cập nhật sản phẩm thất bại";
+        err.response?.data?.message || "❌ Cập nhật sản phẩm thất bại!";
       throw new Error(msg);
     }
   },
 
+  // Xóa sản phẩm
   deleteProduct: async (id) => {
     try {
-      const res = await axios.delete(`${BASE}/products/${id}`, { headers: headers() });
+      const res = await axios.delete(`${BASE}/products/delete/${id}`, {
+        headers: headers(),
+      });
       return res.data;
     } catch (err) {
-      const msg = err.response?.data?.message || "❌ Không thể xóa sản phẩm";
+      const msg =
+        err.response?.data?.message || "❌ Không thể xóa sản phẩm!";
       throw new Error(msg);
     }
   },
+  
 };
+
+
+
+
