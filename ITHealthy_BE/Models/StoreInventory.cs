@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ITHealthy.Models;
 
@@ -20,4 +21,9 @@ public partial class StoreInventory
     public virtual Ingredient Ingredient { get; set; } = null!;
 
     public virtual Store Store { get; set; } = null!;
+
+    [NotMapped]
+    public string? IngredientName => Ingredient != null ? Ingredient.IngredientName : null;
+
+    public string? StoreName => Store != null ? Store.StoreName : null;
 }
