@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ITHealthy.Models;
 
@@ -22,4 +23,8 @@ public partial class StoreProduct
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
     public virtual Store? Store { get; set; }
+
+    [NotMapped]
+    public string? StoreName => Store != null ? Store.StoreName : null;
+    public string? ProductName => Product != null ? Product.ProductName : null;
 }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
@@ -76,10 +77,10 @@ namespace ITHealthy.Controllers
                 {
                     sp.StoreProductId,
                     sp.ProductId,
-                    Product = sp.Product.ProductName,
+                    ProductName = sp.Product != null ? sp.Product.ProductName : null,
                     sp.Price,
                     sp.Stock,
-                    sp.IsAvailable
+                    
                 })
                 .ToListAsync();
 
@@ -100,10 +101,9 @@ namespace ITHealthy.Controllers
                 {
                     sp.StoreProductId,
                     sp.StoreId,
-                    StoreName = sp.Store.StoreName,
+                    StoreName = sp.Store != null ? sp.Store.StoreName : null,
                     sp.Price,
                     sp.Stock,
-                    sp.IsAvailable
                 })
                 .ToListAsync();
 
