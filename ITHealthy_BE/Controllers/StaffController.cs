@@ -1,8 +1,12 @@
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using ITHealthy.Data;
+using ITHealthy.DTOs;
 using ITHealthy.Models;
+using ITHealthy.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using ITHealthy.Controllers;
 
 namespace ITHealthy.Controllers
 {
@@ -11,10 +15,12 @@ namespace ITHealthy.Controllers
     public class StaffsController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;
+        private readonly CloudinaryService _cloudinaryService;
 
-        public StaffsController(ITHealthyDbContext context)
+        public StaffsController(ITHealthyDbContext context, CloudinaryService cloudinaryService)
         {
             _context = context;
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: api/staffs
@@ -65,7 +71,7 @@ namespace ITHealthy.Controllers
         }
         // POST: api/staffs
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Staff staff)
+        public async Task<ActionResult<Staff>> Create([FromForm] StaffRequestDTO staff)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -81,21 +87,43 @@ namespace ITHealthy.Controllers
             if (errors.Count > 0)
                 return BadRequest(new { messages = errors });
 
-            staff.PasswordHash = AuthController.HashPassword(staff.PasswordHash);
-            staff.IsActive = true;
+            string? avatarUrl = null;
+            if (staff.Avatar != null && staff.Avatar.Length > 0)
+            {
+                avatarUrl = await _cloudinaryService.UploadImageAsync(staff.Avatar);
+            }
 
-            _context.Staff.Add(staff);
+            staff.PasswordHash = AuthController.HashPassword(staff.PasswordHash);
+            // staff.IsActive = true;
+
+            var newStaff = new Staff
+            {
+                StoreId = staff.StoreId,
+                FullName = staff.FullName,
+                Phone = staff.Phone,
+                Email = staff.Email,
+                PasswordHash = staff.PasswordHash,
+                Gender = staff.Gender,
+                Dob = staff.Dob,
+                Avatar = avatarUrl,
+                RoleStaff = staff.RoleStaff,
+                HireDate = staff.HireDate,
+            };
+                
+                _context.Staff.Add(newStaff);
             await _context.SaveChangesAsync();
+                
+            var store = await _context.Stores.FindAsync(staff.StoreId);
 
             return Ok(new
             {
                 message = "Tạo nhân viên thành công!",
-                data = staff
+                data = newStaff
             });
         }
         // // PUT: api/staffs/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Staff updatedStaff)
+        public async Task<IActionResult> Update(int id, [FromForm] StaffRequestDTO updatedStaff)
         {
             var staff = await _context.Staff.FindAsync(id);
             if (staff == null)
@@ -114,6 +142,13 @@ namespace ITHealthy.Controllers
             if (errors.Count > 0)
                 return BadRequest(new { messages = errors });
 
+
+            if (updatedStaff.Avatar != null && updatedStaff.Avatar.Length > 0)
+            {
+                var avatarUrl = await _cloudinaryService.UploadImageAsync(updatedStaff.Avatar);
+                staff.Avatar = avatarUrl;
+            }
+
             // 🔹 Cập nhật thông tin
             staff.StoreId = updatedStaff.StoreId;
             staff.FullName = updatedStaff.FullName;
@@ -122,7 +157,9 @@ namespace ITHealthy.Controllers
             staff.Gender = updatedStaff.Gender;
             staff.Dob = updatedStaff.Dob;
             staff.RoleStaff = updatedStaff.RoleStaff;
-            staff.IsActive = updatedStaff.IsActive;
+            staff.HireDate = updatedStaff.HireDate;
+            staff.Avatar = staff.Avatar;
+            // staff.IsActive = updatedStaff.IsActive;
 
             // 🔹 Mã hoá lại mật khẩu nếu có thay đổi
             if (!string.IsNullOrEmpty(updatedStaff.PasswordHash) &&
