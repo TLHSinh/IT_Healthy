@@ -3,13 +3,14 @@ import React, { useState, useEffect } from "react";
 import { adminApi } from "../../api/adminApi";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import bgLogin from "../../assets/bg_login.jpg"; // import ảnh
 
 const AdminLogin = () => {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Khi component mount -> kiểm tra xem có remember login hay không
+  // Kiểm tra remember login
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
     const savedPassword = localStorage.getItem("rememberedPassword");
@@ -34,20 +35,16 @@ const AdminLogin = () => {
     try {
       const res = await adminApi.login(form);
 
-      // Lấy role chuẩn từ API
       const role = res.data.staff?.roleStaff?.toLowerCase() || res.data.role?.toLowerCase();
-
       if (role !== "admin") {
         toast.error("Tài khoản này không có quyền quản trị!");
         setLoading(false);
         return;
       }
 
-      // Lưu token và thông tin admin
       localStorage.setItem("adminToken", res.data.accessToken);
       localStorage.setItem("adminInfo", JSON.stringify(res.data.staff));
 
-      // Lưu remember nếu chọn
       if (form.remember) {
         localStorage.setItem("rememberedEmail", form.email);
         localStorage.setItem("rememberedPassword", form.password);
@@ -66,9 +63,17 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
-      <Toaster position="top-right" reverseOrder={false} />
-      <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-[400px]">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: `url(${bgLogin})` }}
+    >
+      {/* Overlay mờ */}
+      <div className="absolute inset-0 bg-black/30"></div>
+
+      {/* Nội dung login */}
+      <div className="relative z-10 bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-[400px]">
+        <Toaster position="top-right" reverseOrder={false} />
+
         <div className="flex flex-col items-center mb-6">
           <h1 className="text-2xl font-bold text-indigo-700 text-center mb-4">
             ITHealthy Admin

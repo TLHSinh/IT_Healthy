@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import toast, { Toaster } from "react-hot-toast";
-import { Eye, EyeOff, X, UserPlus, Edit3, Eye as EyeIcon } from "lucide-react";
+import { toast } from "react-toastify";
+import { EyeIcon, EyeOff, X, UserPlus, Edit3 } from "lucide-react";
 
 const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isView = false }) => {
   const [form, setForm] = useState({
@@ -55,51 +55,48 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.fullName || !form.email) {
-      toast.error("Vui lòng nhập họ tên và email");
-      return;
-    }
-    if (!form.storeId) {
-      toast.error("Vui lòng chọn cửa hàng");
-      return;
-    }
+  // Validation cơ bản trên client
+  if (!form.fullName || !form.email) {
+    toast.error("Vui lòng nhập họ tên và email");
+    return;
+  }
+  if (!form.storeId) {
+    toast.error("Vui lòng chọn cửa hàng");
+    return;
+  }
 
-    setSaving(true);
-    try {
-      await onSave(form, isCreate);
-      toast.success(isCreate ? "Tạo nhân viên thành công!" : "Cập nhật nhân viên thành công!");
+  setSaving(true);
+  try {
+    const result = await onSave(form, isCreate);
+    if (result.success) {
       onClose();
-    } catch (err) {
-      const msg =
-        err?.response?.data?.messages?.join("\n") ||
-        err?.response?.data?.message ||
-        "❌ Lưu thất bại, vui lòng thử lại!";
-      toast.error(msg);
-    } finally {
-      setSaving(false);
     }
-  };
+  } finally {
+    setSaving(false);
+  }
+};
+
+  if (!staff && !isCreate && !isView) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <Toaster position="top-right" reverseOrder={false} />
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative animate-fadeIn">
         {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <h3 className="text-xl font-semibold flex items-center gap-2 text-indigo-700">
             {isCreate ? (
               <>
-                <UserPlus size={20} /> Thêm nhân viên
+                <UserPlus size={20} /> Thêm Nhân viên
               </>
             ) : isView ? (
               <>
-                <EyeIcon size={20} /> Xem thông tin nhân viên
+                <EyeIcon size={20} /> Xem thông tin Nhân viên
               </>
             ) : (
               <>
-                <Edit3 size={20} /> Cập nhật nhân viên
+                <Edit3 size={20} /> Cập nhật Nhân viên
               </>
             )}
           </h3>
@@ -113,6 +110,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Họ tên & Email */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-gray-600">Họ tên</label>
@@ -124,7 +122,6 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
                 readOnly={isView}
               />
             </div>
-
             <div>
               <label className="text-sm font-medium text-gray-600">Email</label>
               <input
@@ -138,6 +135,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
             </div>
           </div>
 
+          {/* SĐT & Cửa hàng */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-gray-600">Số điện thoại</label>
@@ -149,7 +147,6 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
                 readOnly={isView}
               />
             </div>
-
             <div>
               <label className="text-sm font-medium text-gray-600">Cửa hàng</label>
               <select
@@ -169,6 +166,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
             </div>
           </div>
 
+          {/* Vai trò & Ngày vào */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-gray-600">Vai trò</label>
@@ -184,7 +182,6 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
                 <option value="manager">Manager</option>
               </select>
             </div>
-
             <div>
               <label className="text-sm font-medium text-gray-600">Ngày vào</label>
               <input
@@ -198,6 +195,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
             </div>
           </div>
 
+          {/* Mật khẩu */}
           {!isView && (
             <div className="relative">
               <label className="text-sm font-medium text-gray-600">
@@ -220,6 +218,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
             </div>
           )}
 
+          {/* Checkbox active */}
           <div className="flex items-center gap-3 mt-2">
             <input
               id="active"
@@ -244,7 +243,6 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
             >
               {isView ? "Đóng" : "Hủy"}
             </button>
-
             {!isView && (
               <button
                 type="submit"

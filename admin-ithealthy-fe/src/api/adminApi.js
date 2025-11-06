@@ -23,31 +23,31 @@ export const adminApi = {
   // ====================== 👨‍💼 NHÂN VIÊN ======================
   getStaffs: () => axios.get(`${BASE}/staffs`, { headers: headers() }),
   getStaffById: (id) => axios.get(`${BASE}/staffs/${id}`, { headers: headers() }),
+  
   createStaff: async (payload) => {
-    try {
-      const formatted = {
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        gender: payload.gender,
-        dob: payload.dob,
-        roleStaff: payload.roleStaff,
-        isActive: payload.isActive ?? true,
-        storeId: payload.storeId || payload.StoreId || 1,
-        hireDate: payload.hireDate || new Date().toISOString(),
-        PasswordHash: payload.password || payload.PasswordHash || "",
-      };
-      const res = await axios.post(`${BASE}/staffs`, formatted, { headers: headers() });
-      return res.data;
-    } catch (err) {
-      const msg =
-        err.response?.data?.messages?.join("\n") ||
-        err.response?.data?.message ||
-        "❌ Tạo nhân viên thất bại";
-      alert(msg);
-      return null;
-    }
-  },
+  try {
+    const formatted = {
+      fullName: payload.fullName,
+      email: payload.email,
+      phone: payload.phone,
+      gender: payload.gender,
+      dob: payload.dob,
+      roleStaff: payload.roleStaff,
+      isActive: payload.isActive ?? true,
+      storeId: payload.storeId || payload.StoreId || 1,
+      hireDate: payload.hireDate || new Date().toISOString(),
+      PasswordHash: payload.password || payload.PasswordHash || "",
+    };
+    const res = await axios.post(`${BASE}/staffs`, formatted, { headers: headers() });
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.messages?.join("\n") ||
+      err.response?.data?.message ||
+      "❌ Tạo nhân viên thất bại";
+    throw new Error(msg); // ❌ bỏ alert, ✅ ném lỗi để toast xử lý
+  }
+},
   updateStaff: async (id, payload) => {
     try {
       const formatted = {
@@ -87,121 +87,215 @@ export const adminApi = {
   // ====================== 🏬 CỬA HÀNG ======================
   getStores: () => axios.get(`${BASE}/stores`, { headers: headers() }),
   getStoreById: (id) => axios.get(`${BASE}/stores/${id}`, { headers: headers() }),
+  
   createStore: async (payload) => {
-    try {
-      const formatted = {
-        storeName: payload.storeName,
-        phone: payload.phone,
-        streetAddress: payload.streetAddress,
-        ward: payload.ward,
-        district: payload.district,
-        city: payload.city,
-        country: payload.country || "Việt Nam",
-        postcode: payload.postcode,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        googlePlaceId: payload.googlePlaceId || "",
-        rating: payload.rating || 0,
-        dateJoined: payload.dateJoined || new Date().toISOString(),
-        isActive: payload.isActive ?? true,
-      };
-      const res = await axios.post(`${BASE}/stores`, formatted, { headers: headers() });
-      return res.data;
-    } catch (err) {
-      const msg = err.response?.data?.messages?.join("\n") || err.response?.data?.message || "❌ Tạo cửa hàng thất bại";
-      alert(msg);
-      return null;
-    }
-  },
-  updateStore: async (id, payload) => {
-    try {
-      const formatted = {
-        storeName: payload.storeName,
-        phone: payload.phone,
-        streetAddress: payload.streetAddress,
-        ward: payload.ward,
-        district: payload.district,
-        city: payload.city,
-        country: payload.country || "Việt Nam",
-        postcode: payload.postcode,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        googlePlaceId: payload.googlePlaceId || "",
-        rating: payload.rating || 0,
-        dateJoined: payload.dateJoined || new Date().toISOString(),
-        isActive: payload.isActive ?? true,
-      };
-      const res = await axios.put(`${BASE}/stores/${id}`, formatted, { headers: headers() });
-      return res.data;
-    } catch (err) {
-      const msg = err.response?.data?.messages?.join("\n") || err.response?.data?.message || "❌ Cập nhật cửa hàng thất bại";
-      alert(msg);
-      return null;
-    }
-  },
-  deleteStore: async (id) => {
-    try {
-      const res = await axios.delete(`${BASE}/stores/${id}`, { headers: headers() });
-      return res.data;
-    } catch (err) {
-      const msg = err.response?.data?.message || "❌ Không thể xóa cửa hàng";
-      alert(msg);
-      return null;
-    }
-  },
+  try {
+    const formatted = {
+      storeName: payload.storeName,
+      phone: payload.phone,
+      streetAddress: payload.streetAddress,
+      ward: payload.ward,
+      district: payload.district,
+      city: payload.city,
+      country: payload.country || "Việt Nam",
+      postcode: payload.postcode,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      googlePlaceId: payload.googlePlaceId || "",
+      rating: payload.rating || 0,
+      dateJoined: payload.dateJoined || new Date().toISOString(),
+      isActive: payload.isActive ?? true,
+    };
+
+    const res = await axios.post(`${BASE}/stores`, formatted, { headers: headers() });
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.messages?.join("\n") ||
+      err.response?.data?.message ||
+      "❌ Tạo cửa hàng thất bại";
+    // ❌ Bỏ alert — ✅ ném lỗi để toast bắt và hiển thị
+    throw new Error(msg);
+  }
+},
+
+updateStore: async (id, payload) => {
+  try {
+    const formatted = {
+      storeName: payload.storeName,
+      phone: payload.phone,
+      streetAddress: payload.streetAddress,
+      ward: payload.ward,
+      district: payload.district,
+      city: payload.city,
+      country: payload.country || "Việt Nam",
+      postcode: payload.postcode,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      googlePlaceId: payload.googlePlaceId || "",
+      rating: payload.rating || 0,
+      dateJoined: payload.dateJoined || new Date().toISOString(),
+      isActive: payload.isActive ?? true,
+    };
+
+    const res = await axios.put(`${BASE}/stores/${id}`, formatted, { headers: headers() });
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.messages?.join("\n") ||
+      err.response?.data?.message ||
+      "❌ Cập nhật cửa hàng thất bại";
+    throw new Error(msg);
+  }
+},
+
+deleteStore: async (id) => {
+  try {
+    const res = await axios.delete(`${BASE}/stores/${id}`, { headers: headers() });
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.message || "❌ Không thể xóa cửa hàng";
+    throw new Error(msg);
+  }
+},
+
 
   // ====================== 👤 NGƯỜI DÙNG ======================
 getCustomers: () => axios.get(`${BASE}/customers`, { headers: headers() }),
 getCustomerById: (id) => axios.get(`${BASE}/customers/${id}`, { headers: headers() }),
 
-createCustomer: async (formData) => {
+createCustomer: async (form) => {
   try {
+    const formData = new FormData();
+    formData.append("FullName", form.fullName || "");
+    formData.append("Phone", form.phone || "");
+    formData.append("PasswordHash", form.passwordHash || "");
+    if (form.email) formData.append("Email", form.email);
+    formData.append("Gender", form.gender || "Male");
+    if (form.dob) formData.append("DOB", form.dob);
+    formData.append("RoleUser", form.roleUser || "Customer");
+    formData.append("IsActive", form.isActive ? "true" : "false");
+    if (form.avatarFile) formData.append("AvatarFile", form.avatarFile);
+
     const res = await axios.post(`${BASE}/customers`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${getToken()}`
+        Authorization: `Bearer ${getToken()}`,
       },
     });
-    return res.data;
+
+    return res.data.customer;
   } catch (err) {
     const messages =
       err.response?.data?.messages ||
       [err.response?.data?.message] ||
-      ["❌ Tạo người dùng thất bại"];
-    alert(messages.join("\n"));
-    return null;
+      ["❌ Thêm người dùng thất bại"];
+    throw new Error(messages.join("\n"));
   }
 },
 
-updateCustomer: async (id, formData) => {
+updateCustomer: async (id, form) => {
   try {
+    const formData = new FormData();
+    formData.append("FullName", form.fullName || "");
+    formData.append("Phone", form.phone || "");
+    formData.append("PasswordHash", form.passwordHash || form.oldPassword || "123456"); // ✅ Luôn gửi
+    formData.append("Email", form.email || "");
+    formData.append("Gender", form.gender || "Male");
+    if (form.dob) formData.append("DOB", form.dob);
+    formData.append("RoleUser", form.roleUser || "Customer");
+    formData.append("IsActive", form.isActive ? "true" : "false");
+    if (form.avatarFile) formData.append("AvatarFile", form.avatarFile);
+
     const res = await axios.put(`${BASE}/customers/${id}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${getToken()}`
+        Authorization: `Bearer ${getToken()}`,
       },
     });
-    return res.data;
+
+    return res.data.data;
   } catch (err) {
     const messages =
       err.response?.data?.messages ||
       [err.response?.data?.message] ||
       ["❌ Cập nhật người dùng thất bại"];
-    alert(messages.join("\n"));
-    return null;
-  }
-},
-deleteCustomer: async (id) => {
-  try {
-    const res = await axios.delete(`${BASE}/customers/${id}`, {
-      headers: { Authorization: `Bearer ${getToken()}` }
-    });
-    return res.data;
-  } catch (err) {
-    const msg = err.response?.data?.message || "❌ Không thể xóa người dùng";
-    alert(msg);
-    return null;
+    throw new Error(messages.join("\n"));
   }
 },
 
+
+deleteCustomer: async (id) => {
+  try {
+    await axios.delete(`${BASE}/customers/${id}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    return true;
+  } catch (err) {
+    const msg = err.response?.data?.message || "❌ Không thể xóa người dùng";
+    throw new Error(msg);
+  }
+},
+
+  // ====================== 🛒 SẢN PHẨM ======================
+ getAllProducts: () =>
+    axios.get(`${BASE}/products/all-products`, { headers: headers() }),
+
+  // Lấy sản phẩm theo ID
+  getProductById: (id) =>
+    axios.get(`${BASE}/products/${id}`, { headers: headers() }),
+
+  // Thêm sản phẩm
+  createProduct: async (payload) => {
+    try {
+      const res = await axios.post(`${BASE}/products/add`, payload, {
+        headers: {
+          ...headers(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return res.data;
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "❌ Tạo sản phẩm thất bại!";
+      throw new Error(msg);
+    }
+  },
+
+  // Cập nhật sản phẩm
+  updateProduct: async (id, payload) => {
+    try {
+      const res = await axios.put(`${BASE}/products/update/${id}`, payload, {
+        headers: {
+          ...headers(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return res.data;
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "❌ Cập nhật sản phẩm thất bại!";
+      throw new Error(msg);
+    }
+  },
+
+  // Xóa sản phẩm
+  deleteProduct: async (id) => {
+    try {
+      const res = await axios.delete(`${BASE}/products/delete/${id}`, {
+        headers: headers(),
+      });
+      return res.data;
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "❌ Không thể xóa sản phẩm!";
+      throw new Error(msg);
+    }
+  },
+  
 };
+
+
+
+

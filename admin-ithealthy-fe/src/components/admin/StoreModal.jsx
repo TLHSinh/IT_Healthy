@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../api/adminApi";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-toastify"; // ✅ dùng react-toastify thay vì react-hot-toast
 import { XCircle } from "lucide-react";
 
 const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
@@ -20,7 +20,7 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // Reset form khi đóng modal
+  // ✅ Reset form khi đóng modal
   const resetForm = () => {
     setForm({
       storeName: "",
@@ -37,7 +37,7 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     });
   };
 
-  // Cập nhật form khi mở modal
+  // ✅ Cập nhật form khi mở modal
   useEffect(() => {
     if (store) {
       setForm({
@@ -58,6 +58,7 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     }
   }, [store]);
 
+  // ✅ Bắt sự kiện thay đổi input
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -66,40 +67,42 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     }));
   };
 
+  // ✅ Gửi form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
+    if (!form.storeName || !form.phone || !form.streetAddress) {
+      toast.warning("⚠️ Vui lòng nhập đầy đủ tên, SĐT và địa chỉ cửa hàng.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      // ✅ Thêm ngày gia nhập để backend nhận đúng định dạng
       const dataToSend = {
         ...form,
-        dateJoined: new Date().toISOString().split("T")[0], // "YYYY-MM-DD"
+        dateJoined: new Date().toISOString().split("T")[0],
       };
 
       if (store) {
-        // ✅ Xác định ID chuẩn
         const storeId = store?.storeId ?? store?.StoreId;
-        console.log("🧩 ID cần cập nhật:", storeId);
-
-        if (!storeId) {
-          toast.error("Không tìm thấy ID cửa hàng!");
-          return;
-        }
+        if (!storeId) throw new Error("Không tìm thấy ID cửa hàng để cập nhật!");
 
         await adminApi.updateStore(storeId, dataToSend);
-        toast.success("✅ Cập nhật cửa hàng thành công!");
+        toast.success("Cập nhật cửa hàng thành công!");
       } else {
         await adminApi.createStore(dataToSend);
-        toast.success("✅ Thêm cửa hàng mới thành công!");
+        toast.success("Thêm cửa hàng mới thành công!");
       }
 
-      refreshList();
-      setIsOpen(false);
-      resetForm();
+      // ⏳ Delay nhẹ để toast hiển thị trước khi đóng modal
+      setTimeout(() => {
+        refreshList();
+        resetForm();
+        setIsOpen(false);
+      }, 0);
     } catch (err) {
       console.error("❌ Lỗi khi lưu:", err);
-      toast.error("Lưu thất bại! Vui lòng thử lại.");
+      toast.error(err.message || "Lưu thất bại! Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +112,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 animate-fadeIn">
-      <Toaster position="top-right" />
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 relative animate-slideUp border border-gray-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
