@@ -2,9 +2,6 @@ import React, { useEffect, useState } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import { toast } from "react-toastify";
 import { adminApi } from "../../api/adminApi";
-
-
-// ✅ Import icon đúng
 import { UserPlus, EyeIcon, Edit3 } from "lucide-react";
 
 const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
@@ -22,7 +19,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
 
   const [preview, setPreview] = useState(null);
 
-  // ✅ Đổ dữ liệu vào form khi mở modal
+  // Load dữ liệu user vào form
   useEffect(() => {
     if (user) {
       setForm({
@@ -75,13 +72,24 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
     }
 
     try {
+      let payload = { ...form };
+
+      // Nếu có avatarFile, upload lên server (Cloudinary hoặc endpoint backend)
+      if (form.avatarFile) {
+        const fileData = new FormData();
+        fileData.append("file", form.avatarFile);
+        // Giả sử backend trả về url avatar
+        const resUpload = await adminApi.uploadAvatar(fileData);
+        payload.avatar = resUpload.data?.url || null;
+      }
+
       let result;
       if (user) {
-        const res = await adminApi.updateCustomer(user.customerId, form);
+        const res = await adminApi.updateCustomer(user.customerId, payload);
         result = res?.data || res;
         toast.success("Cập nhật người dùng thành công!");
       } else {
-        const res = await adminApi.createCustomer(form);
+        const res = await adminApi.createCustomer(payload);
         result = res?.data || res;
         toast.success("Thêm người dùng thành công!");
       }
@@ -99,8 +107,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 transition-all">
       <div className="bg-white w-full max-w-lg p-6 rounded-2xl relative shadow-2xl border border-gray-200 animate-fadeIn">
-        
-
+        {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <h3 className="text-xl font-semibold flex items-center gap-2 text-indigo-700">
             {isCreate ? (
@@ -117,16 +124,13 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
               </>
             )}
           </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-red-500 transition"
-          >
+          <button onClick={onClose} className="text-gray-500 hover:text-red-500 transition">
             <AiOutlineClose size={22} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* --- Họ tên + Email --- */}
+          {/* Họ tên + Email */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-600">Họ tên *</label>
@@ -155,7 +159,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
             </div>
           </div>
 
-          {/* --- SĐT + Mật khẩu --- */}
+          {/* SĐT + Mật khẩu */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-600">Số điện thoại *</label>
@@ -186,7 +190,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
             )}
           </div>
 
-          {/* --- Giới tính + Ngày sinh --- */}
+          {/* Giới tính + Ngày sinh */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-600">Giới tính</label>
@@ -214,7 +218,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
             </div>
           </div>
 
-          {/* --- Vai trò + Trạng thái --- */}
+          {/* Vai trò + Trạng thái */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-600">Vai trò</label>
@@ -245,7 +249,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
             </div>
           </div>
 
-          {/* --- Ảnh đại diện --- */}
+          {/* Ảnh đại diện */}
           <div>
             <label className="text-sm text-gray-600">Ảnh đại diện</label>
             <div className="flex items-center gap-3 mt-1">
@@ -267,7 +271,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
             </div>
           </div>
 
-          {/* --- Nút hành động --- */}
+          {/* Nút hành động */}
           {!isView && (
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button

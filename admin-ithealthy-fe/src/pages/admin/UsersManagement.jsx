@@ -162,84 +162,90 @@ const UsersManagement = () => {
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <table className="min-w-full text-sm">
           <thead className="bg-indigo-50 text-indigo-700 text-left">
-            <tr>
-              <th className="px-4 py-3 font-semibold">STT</th>
-              <th className="px-4 py-3 font-semibold">Họ tên</th>
-              <th className="px-4 py-3 font-semibold">Email</th>
-              <th className="px-4 py-3 font-semibold">SĐT</th>
-              <th className="px-4 py-3 font-semibold">Role</th>
-              <th className="px-4 py-3 font-semibold">Trạng thái</th>
-              <th className="px-4 py-3 font-semibold text-center">Hành động</th>
-            </tr>
-          </thead>
+  <tr>
+    <th className="px-4 py-3 font-semibold">STT</th>
+    <th className="px-4 py-3 font-semibold">Avatar</th>
+    <th className="px-4 py-3 font-semibold">Họ tên</th>
+    <th className="px-4 py-3 font-semibold">Email</th>
+    <th className="px-4 py-3 font-semibold">SĐT</th>
+    <th className="px-4 py-3 font-semibold">Role</th>
+    <th className="px-4 py-3 font-semibold">Trạng thái</th>
+    <th className="px-4 py-3 font-semibold text-center">Hành động</th>
+  </tr>
+</thead>
+<tbody>
+  {loading ? (
+    <tr>
+      <td colSpan="8" className="text-center py-6 text-gray-500">
+        Đang tải danh sách...
+      </td>
+    </tr>
+  ) : currentData.length === 0 ? (
+    <tr>
+      <td colSpan="8" className="text-center py-6 text-gray-500">
+        Không có người dùng nào phù hợp.
+      </td>
+    </tr>
+  ) : (
+    currentData.map((user, index) => (
+      <tr key={user.customerId} className="border-t hover:bg-indigo-50/30 transition">
+        <td className="px-4 py-3">{(page - 1) * PAGE_SIZE + index + 1}</td>
+        <td className="px-4 py-3">
+          {user.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.fullName}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+              ?
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-3">{user.fullName}</td>
+        <td className="px-4 py-3">{user.email}</td>
+        <td className="px-4 py-3">{user.phone}</td>
+        <td className="px-4 py-3">{user.roleUser || "User"}</td>
+        <td className="px-4 py-3">
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              user.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            }`}
+          >
+            {user.isActive ? "Kích hoạt" : "Khóa"}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2 justify-center">
+            <button
+              onClick={() => handleView(user)}
+              className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
+              title="Xem"
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              onClick={() => handleEdit(user)}
+              className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+              title="Sửa"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button
+              onClick={() => handleDeleteConfirm(user)}
+              className="p-2 rounded-lg hover:bg-red-50 text-red-600"
+              title="Xóa"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-500">
-                  Đang tải danh sách...
-                </td>
-              </tr>
-            ) : currentData.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-500">
-                  Không có người dùng nào phù hợp.
-                </td>
-              </tr>
-            ) : (
-              currentData.map((user, index) => (
-                <tr
-                  key={user.customerId}
-                  className="border-t hover:bg-indigo-50/30 transition"
-                >
-                  <td className="px-4 py-3">
-                    {(page - 1) * PAGE_SIZE + index + 1}
-                  </td>
-                  <td className="px-4 py-3">{user.fullName}</td>
-                  <td className="px-4 py-3">{user.email}</td>
-                  <td className="px-4 py-3">{user.phone}</td>
-                  <td className="px-4 py-3">{user.roleUser || "User"}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        user.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {user.isActive ? "Kích hoạt" : "Khóa"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 justify-center">
-                      <button
-                        onClick={() => handleView(user)}
-                        className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
-                        title="Xem"
-                      >
-                        <Eye size={16} />
-                      </button>
-
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
-                        title="Sửa"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteConfirm(user)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-600"
-                        title="Xóa"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
         </table>
       </div>
 

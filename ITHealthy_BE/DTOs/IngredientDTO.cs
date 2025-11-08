@@ -1,6 +1,7 @@
 namespace ITHealthy.DTOs
 {
-    public class IngredientRequestDTO
+
+    public class IngredientDTO
     {
         public int IngredientId { get; set; }
 
@@ -21,7 +22,7 @@ namespace ITHealthy.DTOs
 
         public decimal? Fat { get; set; }
 
-        public IFormFile? ImageIngredients { get; set; }
+        public string? ImageIngredients { get; set; }
 
         public DateTime? CreatedAt { get; set; }
 
