@@ -1,16 +1,12 @@
+// src/pages/admin/StoreManagement.jsx
 import React, { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminApi";
-import {
-  Store,
-  PlusCircle,
-  Trash2,
-  Edit2,
-  RefreshCcw,
-} from "lucide-react";
+import { Store, PlusCircle, Trash2, Edit2, RefreshCcw, Eye } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import StoreModal from "../../components/admin/StoreModal";
+import StoreInventoryModal from "../../components/admin/StoreInventoryModal";
+import StoreProductsModal from "../../components/admin/StoreProductsModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-
 
 const PAGE_SIZE = 8;
 
@@ -21,18 +17,23 @@ const StoreManagement = () => {
   const [currentStore, setCurrentStore] = useState(null);
   const [page, setPage] = useState(1);
   const [confirmOpen, setConfirmOpen] = useState(false);
-const [storeToDelete, setStoreToDelete] = useState(null);
+  const [storeToDelete, setStoreToDelete] = useState(null);
+
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [inventoryStore, setInventoryStore] = useState(null);
+
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [productsStore, setProductsStore] = useState(null);
 
   // 🔹 Lấy danh sách cửa hàng
   const fetchStores = async () => {
     setLoading(true);
     try {
       const res = await adminApi.getStores();
-      // nếu API trả về mảng thì res.data là mảng, còn nếu axios trả trực tiếp mảng thì dùng res
       const data = res.data || res;
       setStores(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("❌ Lỗi tải danh sách:", err);
+      console.error(err);
       toast.error("Không thể tải danh sách cửa hàng!");
     } finally {
       setLoading(false);
@@ -43,53 +44,54 @@ const [storeToDelete, setStoreToDelete] = useState(null);
     fetchStores();
   }, []);
 
-  // 🔹 Thêm mới
   const handleAddNew = () => {
     setCurrentStore(null);
     setModalOpen(true);
   };
 
-  // 🔹 Sửa
   const handleEdit = (store) => {
     setCurrentStore(store);
     setModalOpen(true);
   };
 
-  // 🔹 Xóa
   const handleDelete = async () => {
-  if (!storeToDelete) return;
-  const id = storeToDelete.storeId || storeToDelete.StoreId;
+    if (!storeToDelete) return;
+    const id = storeToDelete.storeId || storeToDelete.StoreId;
 
-  try {
-    await adminApi.deleteStore(id);
-    toast.success("Đã xóa cửa hàng thành công!");
-    // Cập nhật danh sách mà không cần reload toàn bộ
-    setStores((prev) => prev.filter((s) => (s.storeId || s.StoreId) !== id));
-  } catch (err) {
-    console.error("Lỗi khi xóa:", err);
-
-    const msg = err?.response?.data?.message || err.message || "Không thể xóa cửa hàng!";
-
-    // Nếu lỗi do còn nhân viên
-    if (msg.toLowerCase().includes("nhân viên") || msg.toLowerCase().includes("employee")) {
-      toast.error("Không thể xóa cửa hàng vì vẫn còn nhân viên thuộc biên chế!");
-    } else {
-      toast.error(msg);
+    try {
+      await adminApi.deleteStore(id);
+      toast.success("Đã xóa cửa hàng thành công!");
+      setStores((prev) => prev.filter((s) => (s.storeId || s.StoreId) !== id));
+    } catch (err) {
+      const msg = err?.response?.data?.message || err.message;
+      if (msg.toLowerCase().includes("nhân viên") || msg.toLowerCase().includes("employee")) {
+        toast.error("Không thể xóa cửa hàng vì vẫn còn nhân viên thuộc biên chế!");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setConfirmOpen(false);
+      setStoreToDelete(null);
     }
-  } finally {
-    setConfirmOpen(false);
-    setStoreToDelete(null);
-  }
-};
+  };
 
-  // --- Xử lý phân trang ---
+  const handleViewInventory = (store) => {
+    setInventoryStore(store);
+    setInventoryModalOpen(true);
+  };
+
+  const handleViewProducts = (store) => {
+    setProductsStore(store);
+    setProductsModalOpen(true);
+  };
+
   const totalPages = Math.ceil(stores.length / PAGE_SIZE);
   const startIndex = (page - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
   const currentPageData = stores.slice(startIndex, endIndex);
 
   return (
-    <div >
+    <div className="p-4">
       <Toaster position="top-right" reverseOrder={false} />
 
       {/* Header */}
@@ -157,30 +159,18 @@ const [storeToDelete, setStoreToDelete] = useState(null);
                   key={store.storeId || store.StoreId}
                   className="border-t hover:bg-indigo-50/30 transition"
                 >
-                  <td className="px-4 py-3 text-gray-700 font-medium">
-                    {startIndex + index + 1}
-                  </td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">{startIndex + index + 1}</td>
                   <td className="px-4 py-3">{store.storeName}</td>
-                  <td className="px-4 py-3 truncate max-w-xs">
-                    {`${store.streetAddress || ""}, ${store.ward || ""}, ${store.district || ""}`}
-                  </td>
+                  <td className="px-4 py-3 truncate max-w-xs">{`${store.streetAddress || ""}, ${store.ward || ""}, ${store.district || ""}`}</td>
                   <td className="px-4 py-3">{store.phone}</td>
                   <td className="px-4 py-3">{store.city}</td>
                   <td className="px-4 py-3">{store.district}</td>
-                  <td className="px-4 py-3">
-                    {store.dateJoined
-                      ? new Date(store.dateJoined).toLocaleDateString("vi-VN")
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {store.rating ?? "-"}
-                  </td>
+                  <td className="px-4 py-3">{store.dateJoined ? new Date(store.dateJoined).toLocaleDateString("vi-VN") : "-"}</td>
+                  <td className="px-4 py-3 text-center">{store.rating ?? "-"}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        store.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                        store.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                       }`}
                     >
                       {store.isActive ? "Hoạt động" : "Ngừng"}
@@ -205,6 +195,20 @@ const [storeToDelete, setStoreToDelete] = useState(null);
                       >
                         <Trash2 size={16} />
                       </button>
+                      <button
+                        onClick={() => handleViewInventory(store)}
+                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"
+                        title="Xem tồn kho"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleViewProducts(store)}
+                        className="p-2 rounded-lg hover:bg-purple-50 text-purple-600"
+                        title="Xem sản phẩm"
+                      >
+                        <Eye size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -218,9 +222,7 @@ const [storeToDelete, setStoreToDelete] = useState(null);
       {!loading && stores.length > 0 && (
         <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
           <div className="text-gray-600">
-            Hiển thị{" "}
-            <strong>{Math.min(stores.length, page * PAGE_SIZE)}</strong> /{" "}
-            {stores.length} bản ghi
+            Hiển thị <strong>{Math.min(stores.length, page * PAGE_SIZE)}</strong> / {stores.length} bản ghi
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -244,20 +246,20 @@ const [storeToDelete, setStoreToDelete] = useState(null);
         </div>
       )}
 
+      {/* Confirm delete */}
       {confirmOpen && storeToDelete && (
-      <ConfirmDialog
-        title="Xác nhận xóa"
-        message={`Bạn có chắc chắn muốn xóa cửa hàng "${storeToDelete.storeName}"?`}
-        onCancel={() => {
-          setConfirmOpen(false);
-          setStoreToDelete(null);
-        }}
-        onConfirm={handleDelete}
-      />
-    )}
+        <ConfirmDialog
+          title="Xác nhận xóa"
+          message={`Bạn có chắc chắn muốn xóa cửa hàng "${storeToDelete.storeName}"?`}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setStoreToDelete(null);
+          }}
+          onConfirm={handleDelete}
+        />
+      )}
 
-
-      {/* Modal */}
+      {/* Modal thêm/sửa cửa hàng */}
       {modalOpen && (
         <StoreModal
           isOpen={modalOpen}
@@ -266,8 +268,29 @@ const [storeToDelete, setStoreToDelete] = useState(null);
           refreshList={fetchStores}
         />
       )}
+
+      {/* Modal tồn kho */}
+      {inventoryModalOpen && inventoryStore && (
+        <StoreInventoryModal
+          isOpen={inventoryModalOpen}
+          setIsOpen={setInventoryModalOpen}
+          storeId={inventoryStore.storeId}
+          storeName={inventoryStore.storeName}
+        />
+      )}
+
+      {/* Modal sản phẩm */}
+      {productsModalOpen && productsStore && (
+        <StoreProductsModal
+          isOpen={productsModalOpen}
+          setIsOpen={setProductsModalOpen}
+          storeId={productsStore.storeId}
+          storeName={productsStore.storeName}
+        />
+      )}
+
+      
     </div>
-    
   );
 };
 

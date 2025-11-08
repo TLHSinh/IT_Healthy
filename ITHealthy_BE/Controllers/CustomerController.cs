@@ -149,7 +149,7 @@ namespace ITHealthy.Controllers
             _context.Customers.Remove(customer);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { message = "Đã xóa khách hàng thành công!" });
         }
     }
 }

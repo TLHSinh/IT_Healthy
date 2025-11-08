@@ -12,6 +12,12 @@ import ProductManagement from "./pages/admin/ProductManagement";
 import CategoryManagement from "./pages/admin/CategoryManagement";
 import CategoryIngManagement from "./pages/admin/CategoryIngManagement";
 
+//import StoreInventoryManagement from "./pages/admin/StoreInventoryManagement";
+import IngredientManagement from "./pages/admin/IngredientManagement";
+import ProductIngredientsManagement from "./pages/admin/ProductIngredientsManagement";
+
+
+
 import AdminLayout from "./layouts/AdminLayout";
 
 function App() {
@@ -42,6 +48,18 @@ function App() {
           <Route path="/admin/products" element={<ProductManagement />} />
           <Route path="/admin/category" element={<CategoryManagement />} />
           <Route path="/admin/category-ing" element={<CategoryIngManagement />} />
+
+          
+          {/* <Route path="/admin/store-inventory" element={<StoreInventoryManagement />} /> */}
+
+          {/* <Route path="/admin/store-inventory/:storeId" element={<StoreInventoryManagement />} /> */}
+
+
+
+
+          <Route path="/admin/ingredients" element={<IngredientManagement />} />
+          <Route path="/admin/product-ingredients" element={<ProductIngredientsManagement />} />
+
         </Route>
       </Routes>
     </Router>
