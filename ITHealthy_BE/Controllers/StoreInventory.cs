@@ -86,7 +86,6 @@ namespace ITHealthy.Controllers
                 message = "Thêm nguyên liệu vào kho cửa hàng thành công!",
                 data = new
                 {
-                    
                     dto.StoreIngredientId,
                     dto.StoreId,
                     StoreName = store?.StoreName,
@@ -94,7 +93,7 @@ namespace ITHealthy.Controllers
                     IngredientName = ingredient?.IngredientName,
                     dto.StockQuantity,
                     dto.ReorderLevel,
-                    dto.LastUpdated 
+                    dto.LastUpdated
                 }
             });
         }
@@ -139,8 +138,9 @@ namespace ITHealthy.Controllers
                     IngredientName = ingredient?.IngredientName,
                     si.StockQuantity,
                     si.ReorderLevel,
-                    si.LastUpdated 
-                }});
+                    si.LastUpdated
+                }
+            });
         }
 
         // ✅ DELETE

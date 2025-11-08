@@ -1,12 +1,15 @@
 // src/pages/admin/StoreManagement.jsx
 import React, { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminApi";
-import { Store, PlusCircle, Trash2, Edit2, RefreshCcw, Eye } from "lucide-react";
+import { Store, PlusCircle, Trash2, Edit2, RefreshCcw } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import StoreModal from "../../components/admin/StoreModal";
 import StoreInventoryModal from "../../components/admin/StoreInventoryModal";
 import StoreProductsModal from "../../components/admin/StoreProductsModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+
+import { FiPackage } from "react-icons/fi"; // FiPackage = icon kho
+import { BiBox } from "react-icons/bi"; // BiBox = icon kho 2
 
 const PAGE_SIZE = 8;
 
@@ -24,6 +27,10 @@ const StoreManagement = () => {
 
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [productsStore, setProductsStore] = useState(null);
+
+  // 🔹 Search & filter
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // 🔹 Lấy danh sách cửa hàng
   const fetchStores = async () => {
@@ -85,211 +92,267 @@ const StoreManagement = () => {
     setProductsModalOpen(true);
   };
 
-  const totalPages = Math.ceil(stores.length / PAGE_SIZE);
+  // 🔹 Filtered data
+  const filteredStores = stores
+    .filter((s) =>
+      s.storeName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((s) =>
+      statusFilter === ""
+        ? true
+        : statusFilter === "active"
+        ? s.isActive
+        : !s.isActive
+    );
+
+  const totalPages = Math.ceil(filteredStores.length / PAGE_SIZE);
   const startIndex = (page - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const currentPageData = stores.slice(startIndex, endIndex);
+  const currentPageData = filteredStores.slice(startIndex, endIndex);
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen flex flex-col p-4 bg-gray-50">
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-          <Store className="text-indigo-600" /> Quản lý cửa hàng
-        </h2>
+      {/* Main content */}
+      <div className="flex-1">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
+            <Store className="text-indigo-600" /> Quản lý cửa hàng
+          </h2>
 
-        <div className="flex gap-2">
-          <button
-            onClick={fetchStores}
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
-          >
-            <RefreshCcw size={16} /> Làm mới
-          </button>
-          <button
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
-            onClick={handleAddNew}
-          >
-            <PlusCircle size={18} /> Thêm cửa hàng
-          </button>
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="Tìm kiếm cửa hàng..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+
+            {/* Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Ngừng</option>
+            </select>
+
+            {/* Buttons */}
+            <button
+              onClick={fetchStores}
+              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+            >
+              <RefreshCcw size={16} /> Làm mới
+            </button>
+            <button
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
+              onClick={handleAddNew}
+            >
+              <PlusCircle size={18} /> Thêm cửa hàng
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-        <table className="min-w-full text-sm">
-          <thead className="bg-indigo-50 text-indigo-700 text-left">
-            <tr>
-              {[
-                "#",
-                "Tên cửa hàng",
-                "Địa chỉ",
-                "Điện thoại",
-                "Thành phố",
-                "Quận/Huyện",
-                "Ngày tham gia",
-                "Đánh giá",
-                "Trạng thái",
-                "Thao tác",
-              ].map((title) => (
-                <th key={title} className="px-4 py-3 font-semibold">
-                  {title}
-                </th>
-              ))}
-            </tr>
-          </thead>
+        {/* Table */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+          <table className="min-w-full text-sm">
+            <thead className="bg-indigo-50 text-indigo-700 text-left">
+              <tr>
+                {[
+                  "#",
+                  "Tên cửa hàng",
+                  "Địa chỉ",
+                  "Điện thoại",
+                  "Thành phố",
+                  "Quận/Huyện",
+                  "Ngày tham gia",
+                  "Đánh giá",
+                  "Trạng thái",
+                  "Thao tác",
+                ].map((title) => (
+                  <th key={title} className="px-4 py-3 font-semibold">
+                    {title}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="10" className="p-6 text-center text-gray-500">
-                  Đang tải dữ liệu...
-                </td>
-              </tr>
-            ) : currentPageData.length === 0 ? (
-              <tr>
-                <td colSpan="10" className="p-6 text-center text-gray-500">
-                  Không có cửa hàng nào.
-                </td>
-              </tr>
-            ) : (
-              currentPageData.map((store, index) => (
-                <tr
-                  key={store.storeId || store.StoreId}
-                  className="border-t hover:bg-indigo-50/30 transition"
-                >
-                  <td className="px-4 py-3 text-gray-700 font-medium">{startIndex + index + 1}</td>
-                  <td className="px-4 py-3">{store.storeName}</td>
-                  <td className="px-4 py-3 truncate max-w-xs">{`${store.streetAddress || ""}, ${store.ward || ""}, ${store.district || ""}`}</td>
-                  <td className="px-4 py-3">{store.phone}</td>
-                  <td className="px-4 py-3">{store.city}</td>
-                  <td className="px-4 py-3">{store.district}</td>
-                  <td className="px-4 py-3">{store.dateJoined ? new Date(store.dateJoined).toLocaleDateString("vi-VN") : "-"}</td>
-                  <td className="px-4 py-3 text-center">{store.rating ?? "-"}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        store.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {store.isActive ? "Hoạt động" : "Ngừng"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(store)}
-                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
-                        title="Sửa"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setStoreToDelete(store);
-                          setConfirmOpen(true);
-                        }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-600"
-                        title="Xóa"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleViewInventory(store)}
-                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"
-                        title="Xem tồn kho"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleViewProducts(store)}
-                        className="p-2 rounded-lg hover:bg-purple-50 text-purple-600"
-                        title="Xem sản phẩm"
-                      >
-                        <Eye size={16} />
-                      </button>
-                    </div>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : currentPageData.length === 0 ? (
+                <tr>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    Không có cửa hàng nào.
+                  </td>
+                </tr>
+              ) : (
+                currentPageData.map((store, index) => (
+                  <tr
+                    key={store.storeId || store.StoreId}
+                    className="border-t hover:bg-indigo-50/30 transition"
+                  >
+                    <td className="px-4 py-3 text-gray-700 font-medium">{startIndex + index + 1}</td>
+                    <td className="px-4 py-3">{store.storeName}</td>
+                    <td className="px-4 py-3 truncate max-w-xs">{`${store.streetAddress || ""}, ${store.ward || ""}, ${store.district || ""}`}</td>
+                    <td className="px-4 py-3">{store.phone}</td>
+                    <td className="px-4 py-3">{store.city}</td>
+                    <td className="px-4 py-3">{store.district}</td>
+                    <td className="px-4 py-3">{store.dateJoined ? new Date(store.dateJoined).toLocaleDateString("vi-VN") : "-"}</td>
+                    <td className="px-4 py-3 text-center">{store.rating ?? "-"}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          store.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {store.isActive ? "Hoạt động" : "Ngừng"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(store)}
+                          className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+                          title="Sửa"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStoreToDelete(store);
+                            setConfirmOpen(true);
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-600"
+                          title="Xóa"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleViewInventory(store)}
+                          className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"
+                          title="Xem tồn kho"
+                        >
+                          <FiPackage size={16} />
+                        </button>
+
+                        <button
+                          onClick={() => handleViewProducts(store)}
+                          className="p-2 rounded-lg hover:bg-purple-50 text-purple-600"
+                          title="Xem sản phẩm"
+                        >
+                          <BiBox size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {!loading && filteredStores.length > 0 && (
+          <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
+            <div className="text-gray-600">
+              Hiển thị <strong>{Math.min(filteredStores.length, page * PAGE_SIZE)}</strong> / {filteredStores.length} bản ghi
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              >
+                ← Trước
+              </button>
+              <span className="px-2">
+                Trang <strong>{page}</strong> / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              >
+                Sau →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm delete */}
+        {confirmOpen && storeToDelete && (
+          <ConfirmDialog
+            title="Xác nhận xóa"
+            message={`Bạn có chắc chắn muốn xóa cửa hàng "${storeToDelete.storeName}"?`}
+            onCancel={() => {
+              setConfirmOpen(false);
+              setStoreToDelete(null);
+            }}
+            onConfirm={handleDelete}
+          />
+        )}
+
+        {/* Modal thêm/sửa cửa hàng */}
+        {modalOpen && (
+          <StoreModal
+            isOpen={modalOpen}
+            setIsOpen={setModalOpen}
+            store={currentStore}
+            refreshList={fetchStores}
+          />
+        )}
+
+        {/* Modal tồn kho */}
+        {inventoryModalOpen && inventoryStore && (
+          <StoreInventoryModal
+            isOpen={inventoryModalOpen}
+            setIsOpen={setInventoryModalOpen}
+            storeId={inventoryStore.storeId}
+            storeName={inventoryStore.storeName}
+          />
+        )}
+
+        {/* Modal sản phẩm */}
+        {productsModalOpen && productsStore && (
+          <StoreProductsModal
+            isOpen={productsModalOpen}
+            setIsOpen={setProductsModalOpen}
+            storeId={productsStore.storeId}
+            storeName={productsStore.storeName}
+          />
+        )}
       </div>
 
-      {/* Pagination */}
-      {!loading && stores.length > 0 && (
-        <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
-          <div className="text-gray-600">
-            Hiển thị <strong>{Math.min(stores.length, page * PAGE_SIZE)}</strong> / {stores.length} bản ghi
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-            >
-              ← Trước
-            </button>
-            <span className="px-2">
-              Trang <strong>{page}</strong> / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-            >
-              Sau →
-            </button>
-          </div>
+      {/* Footer giải thích icon cố định dưới cùng */}
+      <div className="mt-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap gap-4 text-sm text-gray-700 shadow-md">
+        <div className="flex items-center gap-2">
+          <Edit2 size={16} className="text-yellow-600" />
+          <span>Sửa cửa hàng</span>
         </div>
-      )}
-
-      {/* Confirm delete */}
-      {confirmOpen && storeToDelete && (
-        <ConfirmDialog
-          title="Xác nhận xóa"
-          message={`Bạn có chắc chắn muốn xóa cửa hàng "${storeToDelete.storeName}"?`}
-          onCancel={() => {
-            setConfirmOpen(false);
-            setStoreToDelete(null);
-          }}
-          onConfirm={handleDelete}
-        />
-      )}
-
-      {/* Modal thêm/sửa cửa hàng */}
-      {modalOpen && (
-        <StoreModal
-          isOpen={modalOpen}
-          setIsOpen={setModalOpen}
-          store={currentStore}
-          refreshList={fetchStores}
-        />
-      )}
-
-      {/* Modal tồn kho */}
-      {inventoryModalOpen && inventoryStore && (
-        <StoreInventoryModal
-          isOpen={inventoryModalOpen}
-          setIsOpen={setInventoryModalOpen}
-          storeId={inventoryStore.storeId}
-          storeName={inventoryStore.storeName}
-        />
-      )}
-
-      {/* Modal sản phẩm */}
-      {productsModalOpen && productsStore && (
-        <StoreProductsModal
-          isOpen={productsModalOpen}
-          setIsOpen={setProductsModalOpen}
-          storeId={productsStore.storeId}
-          storeName={productsStore.storeName}
-        />
-      )}
-
-      
+        <div className="flex items-center gap-2">
+          <Trash2 size={16} className="text-red-600" />
+          <span>Xóa cửa hàng</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <FiPackage size={16} className="text-blue-600" />
+          <span>Xem tồn kho</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <BiBox size={16} className="text-purple-600" />
+          <span>Xem sản phẩm</span>
+        </div>
+      </div>
     </div>
   );
 };
