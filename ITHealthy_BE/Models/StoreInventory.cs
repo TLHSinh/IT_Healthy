@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace ITHealthy.Models;
 
@@ -18,12 +19,24 @@ public partial class StoreInventory
 
     public DateTime? LastUpdated { get; set; }
 
-    public virtual Ingredient Ingredient { get; set; } = null!;
+    // public virtual Ingredient Ingredient { get; set; } = null!;
 
-    public virtual Store Store { get; set; } = null!;
+    // public virtual Store Store { get; set; } = null!;
+
+    // [NotMapped]
+    // public string? IngredientName => Ingredient != null ? Ingredient.IngredientName : null;
+
+    // public string? StoreName => Store != null ? Store.StoreName : null;
+    [JsonIgnore]
+    public virtual Ingredient? Ingredient { get; set; }
+
+    [JsonIgnore]
+    public virtual Store? Store { get; set; }
+
+    // 🟢 Dùng để hiển thị khi GET, không ánh xạ DB
+    [NotMapped]
+    public string? IngredientName { get; set; }
 
     [NotMapped]
-    public string? IngredientName => Ingredient != null ? Ingredient.IngredientName : null;
-
-    public string? StoreName => Store != null ? Store.StoreName : null;
+    public string? StoreName { get; set; }
 }

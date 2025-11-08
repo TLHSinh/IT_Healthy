@@ -19,6 +19,7 @@ namespace ITHealthy.Controllers
         }
 
 
+        // http://localhost:5000/api/StoreInventory/
         // ✅ GET BY STORE
         [HttpGet("store/{storeId}")]
         public async Task<IActionResult> GetByStore(int storeId)
@@ -61,7 +62,7 @@ namespace ITHealthy.Controllers
             return Ok(list);
         }
 
-        // ✅ CREATE
+        // ✅ CREATE: http://localhost:5000/api/StoreInventory/
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] StoreInventory dto)
         {
@@ -72,19 +73,29 @@ namespace ITHealthy.Controllers
             if (exists)
                 return BadRequest(new { message = "Nguyên liệu này đã tồn tại trong kho của cửa hàng!" });
 
-            var newItem = new StoreInventory
-            {
-                StoreId = dto.StoreId,
-                IngredientId = dto.IngredientId,
-                StockQuantity = dto.StockQuantity ?? 0,
-                ReorderLevel = dto.ReorderLevel ?? 0,
-                LastUpdated = DateTime.UtcNow
-            };
+            dto.LastUpdated = DateTime.UtcNow;
 
-            _context.StoreInventories.Add(newItem);
+            _context.StoreInventories.Add(dto);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Thêm nguyên liệu vào kho cửa hàng thành công!", data = newItem });
+            var store = await _context.Stores.FindAsync(dto.StoreId);
+            var ingredient = await _context.Ingredients.FindAsync(dto.IngredientId);
+
+            return Ok(new
+            {
+                message = "Thêm nguyên liệu vào kho cửa hàng thành công!",
+                data = new
+                {
+                    dto.StoreIngredientId,
+                    dto.StoreId,
+                    StoreName = store?.StoreName,
+                    dto.IngredientId,
+                    IngredientName = ingredient?.IngredientName,
+                    dto.StockQuantity,
+                    dto.ReorderLevel,
+                    dto.LastUpdated 
+                }
+            });
         }
 
         // ✅ UPDATE
@@ -112,8 +123,23 @@ namespace ITHealthy.Controllers
             si.LastUpdated = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            var store = await _context.Stores.FindAsync(dto.StoreId);
+            var ingredient = await _context.Ingredients.FindAsync(dto.IngredientId);
 
-            return Ok(new { message = "Cập nhật kho cửa hàng thành công!", data = si });
+            return Ok(new
+            {
+                message = "Cập nhật kho cửa hàng thành công!",
+                data = new
+                {
+                    si.StoreIngredientId,
+                    si.StoreId,
+                    StoreName = store?.StoreName,
+                    si.IngredientId,
+                    IngredientName = ingredient?.IngredientName,
+                    si.StockQuantity,
+                    si.ReorderLevel,
+                    si.LastUpdated 
+                }});
         }
 
         // ✅ DELETE
