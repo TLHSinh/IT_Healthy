@@ -14,7 +14,7 @@ import CategoryIngManagement from "./pages/admin/CategoryIngManagement";
 
 //import StoreInventoryManagement from "./pages/admin/StoreInventoryManagement";
 import IngredientManagement from "./pages/admin/IngredientManagement";
-import ProductIngredientsManagement from "./pages/admin/ProductIngredientsManagement";
+
 
 
 
@@ -58,7 +58,7 @@ function App() {
 
 
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
-          <Route path="/admin/product-ingredients" element={<ProductIngredientsManagement />} />
+         
 
         </Route>
       </Routes>

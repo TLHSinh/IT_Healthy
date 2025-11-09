@@ -19,6 +19,8 @@ public partial class ProductIngredient
 
     public virtual Product? Product { get; set; }
 
+    
+
     [NotMapped]
     public string? ProductName => Product?.ProductName;
 

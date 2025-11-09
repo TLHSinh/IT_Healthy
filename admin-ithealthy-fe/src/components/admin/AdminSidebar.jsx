@@ -241,18 +241,7 @@ const AdminSidebar = ({ isOpen }) => {
       </NavLink>
       
 
-      <NavLink
-        to="/admin/product-ingredients"
-        className={({ isActive }) =>
-          `px-3 py-2 rounded-lg transition ${
-            isActive
-              ? "bg-orange-100 text-orange-600 font-semibold"
-              : "text-gray-700 hover:bg-orange-50"
-          }`
-        }
-      >
-        Quản lý Nguyên liệu Trong Sản Phẩm
-      </NavLink>
+      
 
       
 
