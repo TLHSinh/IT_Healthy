@@ -93,7 +93,7 @@ namespace ITHealthy.Controllers
                     IngredientName = ingredient?.IngredientName,
                     dto.StockQuantity,
                     dto.ReorderLevel,
-                    dto.LastUpdated 
+                    dto.LastUpdated
                 }
             });
         }
@@ -138,8 +138,9 @@ namespace ITHealthy.Controllers
                     IngredientName = ingredient?.IngredientName,
                     si.StockQuantity,
                     si.ReorderLevel,
-                    si.LastUpdated 
-                }});
+                    si.LastUpdated
+                }
+            });
         }
 
         // ✅ DELETE

@@ -78,9 +78,10 @@ namespace ITHealthy.Controllers
                     sp.StoreProductId,
                     sp.ProductId,
                     ProductName = sp.Product != null ? sp.Product.ProductName : null,
+                    DescriptionProduct = sp.Product != null ? sp.Product.DescriptionProduct : null,
                     sp.Price,
                     sp.Stock,
-                    
+
                 })
                 .ToListAsync();
 
@@ -162,17 +163,17 @@ namespace ITHealthy.Controllers
         }
 
         // 🟢 DELETE: api/storeproducts/{id}
-        // [HttpDelete("{id}")]
-        // public async Task<IActionResult> Delete(int id)
-        // {
-        //     var sp = await _context.StoreProducts.FindAsync(id);
-        //     if (sp == null)
-        //         return NotFound(new { message = "Không tìm thấy dữ liệu để xóa!" });
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var sp = await _context.StoreProducts.FindAsync(id);
+            if (sp == null)
+                return NotFound(new { message = "Không tìm thấy dữ liệu để xóa!" });
 
-        //     _context.StoreProducts.Remove(sp);
-        //     await _context.SaveChangesAsync();
+            _context.StoreProducts.Remove(sp);
+            await _context.SaveChangesAsync();
 
-        //     return Ok(new { message = "Xóa thành công!" });
-        // }
+            return Ok(new { message = "Xóa thành công!" });
+        }
     }
 }

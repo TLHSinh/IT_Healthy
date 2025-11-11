@@ -82,7 +82,7 @@ const CategoryIngManagement = () => {
       <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
         <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
           <Folder className="text-indigo-600" />
-          Quản lý loại nguyên liệu
+          Danh mục Nguyên liệu
         </h2>
 
         <div className="flex flex-wrap gap-2 items-center">
@@ -190,8 +190,10 @@ const CategoryIngManagement = () => {
         <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
           <div className="text-gray-600">
             Hiển thị{" "}
-            <strong>{Math.min(filteredCategories.length, page * PAGE_SIZE)}</strong> /{" "}
-            {filteredCategories.length} bản ghi
+            <strong>
+              {Math.min(filteredCategories.length, page * PAGE_SIZE)}
+            </strong>{" "}
+            / {filteredCategories.length} bản ghi
           </div>
 
           <div className="flex items-center gap-2">

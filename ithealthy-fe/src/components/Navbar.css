@@ -90,6 +90,20 @@
   border-radius: 40px;
 }
 
+.navbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* khoảng cách giữa các icon */
+}
+
+.cart-btn, .auth-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+
 /* .nav-item a::before {
   content: '';
   position: absolute;

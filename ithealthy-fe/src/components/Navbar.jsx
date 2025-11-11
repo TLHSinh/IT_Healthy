@@ -2,7 +2,13 @@ import React, { useState, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { AuthContext } from "../context/AuthContext";
-import { CircleUserRound, LogIn, LogOut, User } from "lucide-react";
+import {
+  CircleUserRound,
+  LogIn,
+  LogOut,
+  User,
+  ShoppingCart,
+} from "lucide-react";
 
 const Navbar = ({ onSubmenuToggle }) => {
   const [activeMenu, setActiveMenu] = useState(null);
@@ -159,8 +165,17 @@ const Navbar = ({ onSubmenuToggle }) => {
             </ul>
           </nav>
 
-          {/* Đăng nhập / Đăng xuất icon */}
           <div className="navbar-auth">
+            {/* Giỏ hàng */}
+            <button
+              className="cart-btn"
+              onClick={() => navigate("/carts")}
+              title="Giỏ hàng"
+            >
+              <ShoppingCart size={24} color="#00B389" />
+            </button>
+
+            {/* Đăng nhập / Đăng xuất */}
             {user ? (
               <button
                 className="auth-btn"

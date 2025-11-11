@@ -10,6 +10,9 @@ import AboutusPage from "../pages/AboutusPage";
 import StoresPage from "../pages/StoresPage";
 import BlogsPage from "../pages/BlogsPage";
 import CreateYourBowlPage from "../pages/CreateYourBowlPage";
+import CartsPage from "../pages/CartsPage";
+import CheckoutPage from "../pages/CheckoutPage";
+import OrderSuccessPage from "../pages/OrderSuccessPage";
 
 import MainLayout from "../layouts/MainLayout";
 
@@ -26,6 +29,9 @@ export default function AppRoutes() {
           <Route path="/stores" element={<StoresPage />} />
           <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/createyourbowl" element={<CreateYourBowlPage />} />
+          <Route path="/Carts" element={<CartsPage />} />
+          <Route path="/Checkout" element={<CheckoutPage />} />
+          <Route path="/OrderSuccess" element={<OrderSuccessPage />} />
         </Route>
 
         {/* Trang không có Navbar */}
