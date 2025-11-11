@@ -190,8 +190,10 @@ const CategoryIngManagement = () => {
         <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
           <div className="text-gray-600">
             Hiển thị{" "}
-            <strong>{Math.min(filteredCategories.length, page * PAGE_SIZE)}</strong> /{" "}
-            {filteredCategories.length} bản ghi
+            <strong>
+              {Math.min(filteredCategories.length, page * PAGE_SIZE)}
+            </strong>{" "}
+            / {filteredCategories.length} bản ghi
           </div>
 
           <div className="flex items-center gap-2">

@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PlusCircle, RefreshCcw, Grid, List, Edit2, Trash2 } from "lucide-react";
+import {
+  PlusCircle,
+  RefreshCcw,
+  Grid,
+  List,
+  Edit2,
+  Trash2,
+} from "lucide-react";
 import IngredientModal from "../../components/admin/IngredientModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { toast, Toaster } from "react-hot-toast";
@@ -23,7 +30,9 @@ const IngredientManagement = () => {
   const fetchIngredients = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/ingredient");
+      const res = await axios.get(
+        "http://localhost:5000/api/ingredient/all-ingredients"
+      );
       setIngredients(res.data || []);
     } catch (err) {
       console.error(err);
@@ -51,7 +60,9 @@ const IngredientManagement = () => {
   const handleDelete = async () => {
     if (!ingredientToDelete) return;
     try {
-      await axios.delete(`http://localhost:5000/api/ingredient/${ingredientToDelete.ingredientId}`);
+      await axios.delete(
+        `http://localhost:5000/api/ingredient/${ingredientToDelete.ingredientId}`
+      );
       toast.success("Đã xóa nguyên liệu thành công!");
       setIngredients((prev) =>
         prev.filter((i) => i.ingredientId !== ingredientToDelete.ingredientId)
@@ -79,7 +90,7 @@ const IngredientManagement = () => {
   const currentPageData = filteredIngredients.slice(startIndex, endIndex);
 
   return (
-    <div >
+    <div>
       <Toaster position="top-right" reverseOrder={false} />
 
       {/* Header */}
@@ -94,7 +105,10 @@ const IngredientManagement = () => {
             placeholder="Tìm kiếm nguyên liệu..."
             className="border rounded px-3 py-2 flex-1 min-w-[200px]"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
           <button
             onClick={fetchIngredients}
@@ -141,45 +155,82 @@ const IngredientManagement = () => {
           <table className="min-w-full text-sm">
             <thead className="bg-indigo-50 text-indigo-700 text-left">
               <tr>
-                {["#", "Tên", "Đơn vị", "Giá gốc", "Calories", "Protein", "Carbs", "Fat", "Trạng thái", "Hành động"].map(
-                  (title) => (
-                    <th key={title} className="px-4 py-3 font-semibold">{title}</th>
-                  )
-                )}
+                {[
+                  "#",
+                  "Tên",
+                  "Đơn vị",
+                  "Giá gốc",
+                  "Calories",
+                  "Protein",
+                  "Carbs",
+                  "Fat",
+                  "Trạng thái",
+                  "Hành động",
+                ].map((title) => (
+                  <th key={title} className="px-4 py-3 font-semibold">
+                    {title}
+                  </th>
+                ))}
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="p-6 text-center text-gray-500">Đang tải dữ liệu...</td>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    Đang tải dữ liệu...
+                  </td>
                 </tr>
               ) : currentPageData.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="p-6 text-center text-gray-500">Không có nguyên liệu nào.</td>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    Không có nguyên liệu nào.
+                  </td>
                 </tr>
               ) : (
                 currentPageData.map((i, idx) => (
-                  <tr key={i.ingredientId} className="border-t hover:bg-indigo-50/30 transition">
+                  <tr
+                    key={i.ingredientId}
+                    className="border-t hover:bg-indigo-50/30 transition"
+                  >
                     <td className="px-4 py-3">{startIndex + idx + 1}</td>
                     <td className="px-4 py-3">{i.ingredientName}</td>
                     <td className="px-4 py-3">{i.unit}</td>
-                    <td className="px-4 py-3">{i.basePrice?.toLocaleString()} đ</td>
+                    <td className="px-4 py-3">
+                      {i.basePrice?.toLocaleString()} đ
+                    </td>
                     <td className="px-4 py-3">{i.calories}</td>
                     <td className="px-4 py-3">{i.protein}</td>
                     <td className="px-4 py-3">{i.carbs}</td>
                     <td className="px-4 py-3">{i.fat}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${i.isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          i.isAvailable
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
                         {i.isAvailable ? "Còn hàng" : "Hết hàng"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => handleEdit(i)} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600" title="Sửa">
+                        <button
+                          onClick={() => handleEdit(i)}
+                          className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+                          title="Sửa"
+                        >
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => { setIngredientToDelete(i); setConfirmOpen(true); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600" title="Xóa">
+                        <button
+                          onClick={() => {
+                            setIngredientToDelete(i);
+                            setConfirmOpen(true);
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-600"
+                          title="Xóa"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -196,25 +247,55 @@ const IngredientManagement = () => {
           {loading ? (
             <p className="text-center col-span-full">Đang tải dữ liệu...</p>
           ) : currentPageData.length === 0 ? (
-            <p className="text-center col-span-full">Không có nguyên liệu nào.</p>
+            <p className="text-center col-span-full">
+              Không có nguyên liệu nào.
+            </p>
           ) : (
             currentPageData.map((i) => (
-              <div key={i.ingredientId} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1 flex flex-col overflow-hidden">
+              <div
+                key={i.ingredientId}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1 flex flex-col overflow-hidden"
+              >
                 <div className="relative aspect-square overflow-hidden rounded-t-2xl">
-                  <img src={i.imageIngredients || "/no-image.png"} alt={i.ingredientName} className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105" />
-                  <span className={`absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold ${i.isAvailable ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                  <img
+                    src={i.imageIngredients || "/no-image.png"}
+                    alt={i.ingredientName}
+                    className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                  />
+                  <span
+                    className={`absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                      i.isAvailable
+                        ? "bg-green-500 text-white"
+                        : "bg-red-500 text-white"
+                    }`}
+                  >
                     {i.isAvailable ? "Còn hàng" : "Hết hàng"}
                   </span>
                 </div>
                 <div className="p-4 flex flex-col flex-1 justify-between">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">{i.ingredientName}</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">
+                    {i.ingredientName}
+                  </h3>
                   <p className="text-sm text-gray-500 mb-1">Đơn vị: {i.unit}</p>
-                  <p className="text-sm text-gray-500 mb-4">Giá: {i.basePrice?.toLocaleString()} đ</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Giá: {i.basePrice?.toLocaleString()} đ
+                  </p>
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => handleEdit(i)} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 shadow-md hover:shadow-lg transition" title="Sửa">
+                    <button
+                      onClick={() => handleEdit(i)}
+                      className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 shadow-md hover:shadow-lg transition"
+                      title="Sửa"
+                    >
                       <Edit2 size={18} />
                     </button>
-                    <button onClick={() => { setIngredientToDelete(i); setConfirmOpen(true); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600 shadow-md hover:shadow-lg transition" title="Xóa">
+                    <button
+                      onClick={() => {
+                        setIngredientToDelete(i);
+                        setConfirmOpen(true);
+                      }}
+                      className="p-2 rounded-lg hover:bg-red-50 text-red-600 shadow-md hover:shadow-lg transition"
+                      title="Xóa"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -229,12 +310,30 @@ const IngredientManagement = () => {
       {!loading && filteredIngredients.length > 0 && (
         <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
           <div className="text-gray-600">
-            Hiển thị <strong>{Math.min(filteredIngredients.length, page * PAGE_SIZE)}</strong> / {filteredIngredients.length} bản ghi
+            Hiển thị{" "}
+            <strong>
+              {Math.min(filteredIngredients.length, page * PAGE_SIZE)}
+            </strong>{" "}
+            / {filteredIngredients.length} bản ghi
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition">← Trước</button>
-            <span className="px-2">Trang <strong>{page}</strong> / {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages} className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition">Sau →</button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+            >
+              ← Trước
+            </button>
+            <span className="px-2">
+              Trang <strong>{page}</strong> / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+            >
+              Sau →
+            </button>
           </div>
         </div>
       )}
@@ -244,7 +343,10 @@ const IngredientManagement = () => {
         <ConfirmDialog
           title="Xác nhận xóa"
           message={`Bạn có chắc chắn muốn xóa nguyên liệu "${ingredientToDelete.ingredientName}"?`}
-          onCancel={() => { setConfirmOpen(false); setIngredientToDelete(null); }}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setIngredientToDelete(null);
+          }}
           onConfirm={handleDelete}
         />
       )}

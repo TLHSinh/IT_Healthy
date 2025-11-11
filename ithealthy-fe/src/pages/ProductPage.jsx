@@ -1,11 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import { useOutletContext } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import axios from "axios";
 
 export default function MenuPage() {
   const { submenuOpen } = useOutletContext(); // 🟢 nhận từ MainLayout
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const sectionRefs = useRef({}); // Lưu ref cho từng category
+  const { user } = useContext(AuthContext); // 🟢 Lấy thông tin user hiện tại
 
   useEffect(() => {
     fetch("http://localhost:5000/api/category/category_pro")
@@ -24,6 +27,30 @@ export default function MenuPage() {
     const ref = sectionRefs.current[categoryId];
     if (ref && ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleAddToCart = async (product) => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
+      return;
+    }
+
+    try {
+      const dto = {
+        customerId: user.customerId, // ✅ tự động lấy từ context
+        productId: product.productId,
+        comboId: null,
+        bowlId: null,
+        quantity: 1,
+        unitPrice: product.basePrice,
+      };
+
+      const res = await axios.post("http://localhost:5000/api/cart/add", dto);
+      alert(res.data.message || "Đã thêm sản phẩm vào giỏ hàng!");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể thêm vào giỏ hàng. Vui lòng thử lại!");
     }
   };
 
@@ -89,7 +116,6 @@ export default function MenuPage() {
                   </div>
                 </div>
 
-                {/* Các sản phẩm */}
                 {filteredProducts.map((p) => (
                   <div
                     key={p.productId}
@@ -108,19 +134,19 @@ export default function MenuPage() {
                       >
                         <path
                           d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
-      2 6 3.5 4 5.5 4c1.54 0 3.04.99 3.57 2.36h1.87C13.46 4.99 
-      14.96 4 16.5 4 18.5 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 
-      11.54L12 21.35z"
+  2 6 3.5 4 5.5 4c1.54 0 3.04.99 3.57 2.36h1.87C13.46 4.99 
+  14.96 4 16.5 4 18.5 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 
+  11.54L12 21.35z"
                         />
                       </svg>
                     </div>
 
-                    {/* Ảnh sản phẩm có hiệu ứng hover */}
+                    {/* Ảnh sản phẩm */}
                     <div className="relative w-full flex justify-center mb-4">
                       <img
                         src={p.imageProduct}
                         alt={p.productName}
-                        className=" group-hover:drop-shadow-2xl w-56 h-56 object-contain drop-shadow-md rounded-full bg-white p-4 transform transition-transform duration-500 group-hover:-translate-y-3 group-hover:scale-110"
+                        className="group-hover:drop-shadow-2xl w-56 h-56 object-contain drop-shadow-md rounded-full bg-white p-4 transform transition-transform duration-500 group-hover:-translate-y-3 group-hover:scale-110"
                       />
                     </div>
 
@@ -141,6 +167,7 @@ export default function MenuPage() {
                       {p.descriptionProduct}
                     </p>
 
+                    {/* Dấu chấm ngăn cách */}
                     <div
                       className="w-full h-[2px] mb-1"
                       style={{
@@ -148,7 +175,7 @@ export default function MenuPage() {
                           "radial-gradient(currentColor 2.5px, transparent 2px)",
                         backgroundSize: "10px 4px",
                         backgroundRepeat: "repeat-x",
-                        color: "#928e8eff", // tương đương text-gray-400
+                        color: "#928e8eff",
                       }}
                     ></div>
 
@@ -174,15 +201,32 @@ export default function MenuPage() {
                       </div>
                     </div>
 
-                    {/* Nút tải công thức */}
-                    <button
-                      onClick={() =>
-                        alert(`Tải công thức cho ${p.productName}`)
-                      }
-                      className="w-full py-2 bg-[#ff623e] text-white font-semibold rounded-full hover:bg-[#e55734] transition-all"
-                    >
-                      Download recipe
-                    </button>
+                    {/* Giá & Nút thêm vào giỏ */}
+                    <div className="flex items-center justify-between w-full mt-auto">
+                      <span className="text-xl font-bold text-[#ff623e]">
+                        {p.basePrice?.toLocaleString("vi-VN")}₫
+                      </span>
+
+                      <button
+                        onClick={() => handleAddToCart(p)}
+                        className="w-10 h-10 flex items-center justify-center bg-[#ff623e] text-white rounded-full hover:bg-[#e55734] transition-all"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-6 h-6"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
 
