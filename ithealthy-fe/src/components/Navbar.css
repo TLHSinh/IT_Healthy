@@ -9,6 +9,19 @@
   backdrop-filter: blur(10px);
 }
 
+.navbar-transparent {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: transparent !important; /* trong suốt tuyệt đối */
+  backdrop-filter: none !important;   /* bỏ hiệu ứng mờ */
+  box-shadow: none !important;        /* bỏ viền đổ bóng */
+  color: white;                       /* chữ trắng để nổi trên video */
+  z-index: 50;
+  transition: background-color 0.3s ease;
+}
+
 /* Main Navbar Container */
 .navbar-container {
   width: 100%;
@@ -64,7 +77,7 @@
 }
 
 .nav-item a {
-  color: #4C082A;
+  color: white;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
@@ -92,7 +105,7 @@
 
 .nav-item a:hover {
   /* color: #a52a5a; */
-  background-color: rgba(165, 42, 90, 0.05);
+  background-color: rgba(167, 151, 8, 0.312);
 }
 
 .nav-item a:hover::before {

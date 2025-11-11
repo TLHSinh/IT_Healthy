@@ -9,6 +9,8 @@ const Navbar = ({ onSubmenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
+  const isHomePage = location.pathname === "/";
+
 
   const handleLogout = () => {
     logout();
@@ -29,7 +31,8 @@ const Navbar = ({ onSubmenuToggle }) => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <div className="navbar-wrapper">
+    // <div className="navbar-wrapper">
+    <div className={`navbar-wrapper ${isHomePage ? "navbar-transparent": ""}`}>
       <div className="navbar-container">
         <div className="navbar-main">
           {/* Logo */}
