@@ -26,6 +26,6 @@ namespace ITHealthy.DTOs
         public DateOnly? HireDate { get; set; }
 
         public IFormFile? Avatar { get; set; }
-
+        public bool? IsActive { get; internal set; }
     }
 }

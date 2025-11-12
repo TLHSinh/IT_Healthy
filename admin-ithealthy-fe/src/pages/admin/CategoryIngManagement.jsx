@@ -165,7 +165,7 @@ const CategoryIngManagement = () => {
                         className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 transition"
                         title="Chỉnh sửa"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() =>
@@ -174,7 +174,7 @@ const CategoryIngManagement = () => {
                         className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition"
                         title="Xóa"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </td>
@@ -185,36 +185,60 @@ const CategoryIngManagement = () => {
         </table>
       </div>
 
-      {/* Pagination */}
-      {!loading && filteredCategories.length > 0 && (
-        <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
-          <div className="text-gray-600">
-            Hiển thị{" "}
-            <strong>{Math.min(filteredCategories.length, page * PAGE_SIZE)}</strong> /{" "}
-            {filteredCategories.length} bản ghi
-          </div>
+      {/* Modern Pagination */}
+{!loading && filteredCategories.length > 0 && (
+  <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
+    {/* Thông tin bản ghi */}
+    <div className="text-gray-600 font-medium">
+      Hiển thị <span className="text-indigo-600 font-bold">{Math.min(filteredCategories.length, page * PAGE_SIZE)}</span> / {filteredCategories.length} bản ghi
+    </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-            >
-              ← Trước
-            </button>
-            <span className="px-2">
-              Trang <strong>{page}</strong> / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-            >
-              Sau →
-            </button>
-          </div>
-        </div>
-      )}
+    {/* Nút phân trang */}
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Nút Đầu */}
+      <button
+        onClick={() => setPage(1)}
+        disabled={page === 1}
+        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        « Đầu
+      </button>
+
+      {/* Nút Trước */}
+      <button
+        onClick={() => setPage((p) => Math.max(1, p - 1))}
+        disabled={page === 1}
+        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        ← Trước
+      </button>
+
+      {/* Hiển thị Trang hiện tại */}
+      <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
+        {page} / {totalPages}
+      </span>
+
+      {/* Nút Sau */}
+      <button
+        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        disabled={page === totalPages}
+        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Sau →
+      </button>
+
+      {/* Nút Cuối */}
+      <button
+        onClick={() => setPage(totalPages)}
+        disabled={page === totalPages}
+        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Cuối »
+      </button>
+    </div>
+  </div>
+)}
+
 
       {/* Modal */}
       {openModal && (

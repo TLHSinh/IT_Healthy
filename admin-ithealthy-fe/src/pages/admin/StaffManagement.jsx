@@ -1,323 +1,270 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { adminApi } from "../../api/adminApi";
-import { User, Search, PlusCircle, Trash2, Edit2, Eye } from "lucide-react";
+// StaffManagement.jsx
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { PlusCircle, EyeIcon, Edit3, Trash2, User, Edit2 } from "lucide-react";
 import StaffModal from "../../components/admin/StaffModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import { Toaster, toast } from "react-hot-toast";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 8; // giống UsersManagement
 
 const StaffManagement = () => {
   const [staffs, setStaffs] = useState([]);
   const [stores, setStores] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [isCreate, setIsCreate] = useState(false);
+  const [isView, setIsView] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
-
-  const [selected, setSelected] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCreateMode, setIsCreateMode] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
-
+  // --- ConfirmDialog
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toDelete, setToDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // --- Pagination
+  const [page, setPage] = useState(1);
+
+  // --- Search & Filter
+  const [searchText, setSearchText] = useState("");
+  const [filterStore, setFilterStore] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterStatus, setFilterStatus] = useState(""); // "active" / "inactive"
+
+  const API_BASE = "http://localhost:5000/api";
+
+  // 🔹 Fetch danh sách nhân viên
+  const fetchStaffs = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/staffs`);
+      setStaffs(res.data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách nhân viên");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Fetch danh sách cửa hàng
+  const fetchStores = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/stores`);
+      setStores(res.data.data || res.data);
+    } catch (err) {
+      toast.error("Không thể tải danh sách cửa hàng");
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     fetchStaffs();
     fetchStores();
   }, []);
 
-  const fetchStaffs = async () => {
-    setLoading(true);
-    setError("");
+  // 🔹 Lưu dữ liệu (tạo mới hoặc cập nhật)
+  const handleSave = async (formData, createMode) => {
     try {
-      const res = await adminApi.getStaffs();
-      setStaffs(res.data || []);
-    } catch (err) {
-      setError(err.response?.data?.message || "Lỗi lấy danh sách nhân viên");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStores = async () => {
-    try {
-      const res = await adminApi.getStores();
-      setStores(res.data || []);
-    } catch (err) {
-      console.error("Lỗi lấy danh sách cửa hàng:", err);
-    }
-  };
-
-  const getStoreName = (storeId) =>
-    stores.find((store) => store.storeId === storeId)?.storeName || "-";
-
-  const filtered = useMemo(() => {
-    let list = staffs;
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (s) =>
-          (s.fullName && s.fullName.toLowerCase().includes(q)) ||
-          (s.email && s.email.toLowerCase().includes(q)) ||
-          (s.phone && s.phone.toLowerCase().includes(q)) ||
-          getStoreName(s.storeId).toLowerCase().includes(q)
-      );
-    }
-    if (roleFilter) {
-      list = list.filter(
-        (s) =>
-          String(s.roleStaff || s.role || "").toLowerCase() ===
-          roleFilter.toLowerCase()
-      );
-    }
-    if (statusFilter) {
-      const map = { active: true, inactive: false };
-      list = list.filter((s) => Boolean(s.isActive) === map[statusFilter]);
-    }
-    return list;
-  }, [staffs, query, roleFilter, statusFilter, stores]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // --- Modal handlers ---
-  const handleView = (staff) => {
-    setSelected(staff);
-    setIsCreateMode(false);
-    setIsViewMode(true);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (staff) => {
-    setSelected(staff);
-    setIsCreateMode(false);
-    setIsViewMode(false);
-    setIsModalOpen(true);
-  };
-
-  const handleCreate = () => {
-    setSelected(null);
-    setIsCreateMode(true);
-    setIsViewMode(false);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteConfirm = (staff) => {
-    setToDelete(staff);
-    setConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    try {
-      await adminApi.deleteStaff(toDelete.staffId);
-      toast.success(`Xóa nhân viên "${toDelete.fullName}" thành công!`);
-      setConfirmOpen(false);
-      setToDelete(null);
+      if (createMode) {
+        await axios.post(`${API_BASE}/staffs`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Thêm nhân viên thành công!");
+      } else {
+        await axios.put(`${API_BASE}/staffs/${selectedStaff.staffId}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Cập nhật nhân viên thành công!");
+      }
+      closeModal();
       fetchStaffs();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Xóa thất bại");
+      toast.error(err.response?.data?.messages?.[0] || "Lưu thất bại");
+      console.error(err);
     }
   };
 
-  const handleSave = async (payload, isNew) => {
-  try {
-    const formatted = {
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-      roleStaff: payload.roleStaff,
-      isActive: payload.isActive ?? true,
-      hireDate: payload.hireDate || new Date().toISOString(),
-      storeId: payload.storeId,
-      PasswordHash: payload.password || "",
-    };
-
-    if (isNew) {
-      await adminApi.createStaff(formatted);
-      toast.success("Tạo nhân viên thành công!");
-    } else {
-      await adminApi.updateStaff(payload.staffId, formatted);
-      toast.success("Cập nhật nhân viên thành công!");
+  // 🔹 Xóa nhân viên
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeletingId(toDelete.staffId);
+    setConfirmOpen(false);
+    try {
+      await axios.delete(`${API_BASE}/staffs/${toDelete.staffId}`);
+      toast.success("Đã xóa nhân viên");
+      setStaffs(prev => prev.filter(s => s.staffId !== toDelete.staffId));
+    } catch (err) {
+      toast.error("Xóa thất bại");
+      console.error(err);
+    } finally {
+      setDeletingId(null);
+      setToDelete(null);
     }
+  };
 
-    setIsModalOpen(false);
-    fetchStaffs();
+  // 🔹 Mở modal
+  const openModal = (mode, staff = null) => {
+    const freshStaff = staff ? staffs.find(s => s.staffId === staff.staffId) || staff : null;
+    setSelectedStaff(freshStaff);
+    setIsCreate(mode === "create");
+    setIsView(mode === "view");
+    setModalOpen(true);
+  };
 
-    return { success: true }; // trả về thành công
-  } catch (err) {
-    const messages =
-      err.response?.data?.messages?.length
-        ? err.response.data.messages
-        : err.response?.data?.message
-        ? [err.response.data.message]
-        : ["Lưu thất bại"];
+  // 🔹 Đóng modal
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedStaff(null);
+    setIsCreate(false);
+    setIsView(false);
+  };
 
-    messages.forEach((msg) => toast.error(msg));
+  // 🔹 Lọc & tìm kiếm
+  const filteredStaffs = staffs.filter(s => {
+  const matchSearch = s.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
+                      s.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+                      s.phone?.includes(searchText);
+  const matchStore = filterStore ? s.storeId === Number(filterStore) : true;
+  const matchRole = filterRole ? s.roleStaff === filterRole : true;
+  const matchStatus = filterStatus
+    ? filterStatus === "active" ? s.isActive : !s.isActive
+    : true;
+  return matchSearch && matchStore && matchRole && matchStatus;
+});
 
-    return { success: false, errors: messages }; // trả về lỗi, KHÔNG throw nữa
-  }
-};
 
+  const totalPages = Math.ceil(filteredStaffs.length / PAGE_SIZE);
+  const currentData = filteredStaffs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // reset page khi filter/search thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [searchText, filterStore, filterRole, filterStatus]);
 
   return (
-    <div >
-      <Toaster position="top-right" reverseOrder={false} />
-
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-indigo-700 flex items-center gap-3">
-          <User className="text-indigo-600" /> Quản lý nhân viên
+          <User className="text-indigo-600" /> Quản lý Nhân viên
         </h2>
+      </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search box */}
-          <div className="flex items-center border border-gray-300 rounded-xl shadow-sm bg-white overflow-hidden focus-within:ring-2 focus-within:ring-indigo-200 transition">
-            <input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 w-64 outline-none text-sm"
-              placeholder="Tìm theo tên, email, SĐT, cửa hàng..."
-            />
-            <div className="px-3 text-gray-500 border-l bg-gray-50">
-              <Search size={18} />
-            </div>
-          </div>
-
-          {/* Filters */}
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
+        <input
+          type="text"
+          placeholder="Tìm theo tên, email, điện thoại..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="px-3 py-2 border rounded-lg shadow-sm w-full sm:w-64"
+        />
+        <div className="flex flex-wrap gap-2">
           <select
-            value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
-              setPage(1);
-            }}
-            className="p-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-indigo-400 transition"
+            value={filterStore}
+            onChange={e => setFilterStore(e.target.value)}
+            className="px-3 py-2 border rounded-lg shadow-sm"
+          >
+            <option value="">Tất cả cửa hàng</option>
+            {stores.map(store => (
+              <option key={store.storeId} value={store.storeId}>{store.storeName}</option>
+            ))}
+          </select>
+          <select
+            value={filterRole}
+            onChange={e => setFilterRole(e.target.value)}
+            className="px-3 py-2 border rounded-lg shadow-sm"
           >
             <option value="">Tất cả vai trò</option>
-            <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
-            <option value="manager">Manager</option>
+            {Array.from(new Set(staffs.map(s => s.roleStaff))).map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
           </select>
-
           <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="p-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-indigo-400 transition"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border rounded-lg shadow-sm"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Đang làm</option>
-            <option value="inactive">Ngừng</option>
+            <option value="inactive">Nghỉ việc</option>
           </select>
 
-          {/* Add button */}
           <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
-          >
-            <PlusCircle size={18} /> Thêm nhân viên
-          </button>
+          onClick={() => openModal("create")}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+        >
+          <PlusCircle size={20}/> Thêm nhân viên
+        </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <table className="min-w-full text-sm">
-          <thead className="bg-indigo-50 text-indigo-700 text-left">
-            <tr>
-              {[
-                "#",
-                "Họ tên",
-                "Email",
-                "Số điện thoại",
-                "Cửa hàng",
-                "Vai trò",
-                "Trạng thái",
-                "Ngày vào",
-                "Thao tác",
-              ].map((title) => (
-                <th key={title} className="px-4 py-3 font-semibold">
-                  {title}
-                </th>
-              ))}
+      <div className="overflow-x-auto bg-white rounded-lg shadow-md relative">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
+          </div>
+        )}
+        <table className="min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-indigo-50 text-indigo-700 text-left">
+              <th className="p-3 border-b">STT</th>
+              <th className="p-3 border-b">Họ tên</th>
+              <th className="p-3 border-b">Ảnh</th>
+              <th className="p-3 border-b">Email</th>
+              <th className="p-3 border-b">Giới tính</th>
+              <th className="p-3 border-b">Điện thoại</th>
+              <th className="p-3 border-b">Cửa hàng</th>
+              <th className="p-3 border-b">Vai trò</th>
+              <th className="p-3 border-b">Ngày vào làm</th>
+              <th className="p-3 border-b text-center">Trạng thái</th>
+              <th className="p-3 border-b text-center">Thao tác</th>
             </tr>
           </thead>
-
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="9" className="p-6 text-center text-gray-500">
-                  Đang tải dữ liệu...
-                </td>
+                <td colSpan="11" className="text-center py-10 text-gray-500">Đang tải dữ liệu...</td>
               </tr>
-            ) : pageData.length === 0 ? (
+            ) : currentData.length === 0 ? (
               <tr>
-                <td colSpan="9" className="p-6 text-center text-gray-500">
-                  Không có dữ liệu
-                </td>
+                <td colSpan="11" className="text-center py-5 text-gray-500">Không có nhân viên nào</td>
               </tr>
             ) : (
-              pageData.map((s, idx) => (
-                <tr
-                  key={s.staffId}
-                  className="border-t hover:bg-indigo-50/30 transition"
-                >
-                  <td className="px-4 py-3 text-gray-700 font-medium">
-                    {(page - 1) * PAGE_SIZE + idx + 1}
+              currentData.map((s, idx) => (
+                <tr key={s.staffId} className="hover:bg-gray-50 transition">
+                  <td className="p-3 border-b">{(page-1)*PAGE_SIZE + idx + 1}</td>
+                  <td className="p-3 border-b">{s.fullName}</td>
+                  <td className="p-3 border-b">
+                    {s.avatar ? (
+                      <img src={s.avatar} alt="avatar" className="w-12 h-12 rounded-full object-cover border"/>
+                    ) : (
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-300 bg-gray-100 text-gray-400">+</div>
+                    )}
                   </td>
-                  <td className="px-4 py-3">{s.fullName}</td>
-                  <td className="px-4 py-3">{s.email}</td>
-                  <td className="px-4 py-3">{s.phone}</td>
-                  <td className="px-4 py-3">{getStoreName(s.storeId)}</td>
-                  <td className="px-4 py-3 capitalize">{s.roleStaff || "-"}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        s.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {s.isActive ? "Đang làm" : "Ngừng"}
+                  <td className="p-3 border-b">{s.email}</td>
+                  <td className="p-3 border-b">{s.gender === "M" ? "Nam" : s.gender === "F" ? "Nữ" : "-"}</td>
+                  <td className="p-3 border-b">{s.phone}</td>
+                  <td className="p-3 border-b">{s.storeName || "—"}</td>
+                  <td className="p-3 border-b capitalize">{s.roleStaff}</td>
+                  <td className="p-3 border-b">{s.hireDate ? new Date(s.hireDate).toLocaleDateString("vi-VN") : "—"}</td>
+                  <td className="p-3 border-b text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.isActive ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}>
+                      {s.isActive ? "Đang làm" : "Nghỉ việc"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    {s.hireDate
-                      ? new Date(s.hireDate).toLocaleDateString()
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleView(s)}
-                        className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
-                        title="Xem"
-                      >
-                        <Eye size={16} />
+                  <td className="p-3 border-b text-center">
+                    <div className="flex justify-center gap-3">
+                      <button onClick={() => openModal("view", s)} className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 hover:text-indigo-800" title="Xem">
+                        <EyeIcon size={18} />
                       </button>
-                      <button
-                        onClick={() => handleEdit(s)}
-                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
-                        title="Sửa"
-                      >
-                        <Edit2 size={16} />
+                      <button onClick={() => openModal("edit", s)} className="p-2 rounded-lg text-yellow-600 hover:bg-green-50 hover:text-green-800" title="Sửa">
+                        <Edit2 size={18} />
                       </button>
-                      <button
-                        onClick={() => handleDeleteConfirm(s)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-600"
-                        title="Xóa"
-                      >
-                        <Trash2 size={16} />
+                      <button onClick={() => { setToDelete(s); setConfirmOpen(true); }} className={`p-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800 ${deletingId === s.staffId ? "opacity-50 cursor-not-allowed" : ""}`} disabled={deletingId === s.staffId} title="Xóa">
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </td>
@@ -329,48 +276,38 @@ const StaffManagement = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-6 text-sm">
-        <div className="text-gray-600">
-          Hiển thị {Math.min(filtered.length, page * PAGE_SIZE)} /{" "}
-          {filtered.length} bản ghi
+      {!loading && filteredStaffs.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3 text-sm">
+          <div className="text-gray-600 font-medium">
+            Hiển thị <span className="text-indigo-600 font-bold">{Math.min(page * PAGE_SIZE, filteredStaffs.length)}</span> / {filteredStaffs.length} bản ghi
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">« Đầu</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">← Trước</button>
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">{page} / {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Sau →</button>
+            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Cuối »</button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-          >
-            ← Trước
-          </button>
-          <span className="px-2">
-            Trang <strong>{page}</strong> / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
-          >
-            Sau →
-          </button>
-        </div>
-      </div>
+      )}
 
-      {/* Modals */}
-      {isModalOpen && (
+      {/* Modal */}
+      {modalOpen && (
         <StaffModal
-          staff={selected}
-          isCreate={isCreateMode}
+          staff={selectedStaff}
+          isCreate={isCreate}
+          isView={isView}
           stores={stores}
-          onClose={() => setIsModalOpen(false)}
+          onClose={closeModal}
           onSave={handleSave}
-          isView={isViewMode}
         />
       )}
 
+      {/* ConfirmDialog */}
       {confirmOpen && (
         <ConfirmDialog
           title="Xác nhận xóa"
-          message={`Bạn có chắc chắn muốn xóa nhân viên "${toDelete?.fullName}"?`}
+          message={`Bạn có chắc chắn muốn xóa Nhân Viên "${toDelete?.fullName}"?`}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={handleDelete}
         />

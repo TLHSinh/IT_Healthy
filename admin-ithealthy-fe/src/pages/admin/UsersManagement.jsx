@@ -1,10 +1,11 @@
+// src/pages/admin/UsersManagement.jsx
 import React, { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminApi";
 import UsersModal from "../../components/admin/UsersModal";
+import ConfirmDialog from "../../components/common/ConfirmDialog"; // ✅ import ConfirmDialog
 import { AiOutlinePlus } from "react-icons/ai";
-import { Search, User } from "lucide-react";
+import { Search, User, Eye, Edit2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { Eye, Edit2, Trash2 } from "lucide-react";
 
 const PAGE_SIZE = 5;
 
@@ -13,11 +14,15 @@ const UsersManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isViewMode, setIsViewMode] = useState(false);
+  const [modalMode, setModalMode] = useState("create"); // create | edit | view
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [modalMode, setModalMode] = useState("create"); // create | edit | view
+  const [deletingId, setDeletingId] = useState(null);
+
+  // ✅ ConfirmDialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toDelete, setToDelete] = useState(null);
 
   // ✅ Lấy danh sách người dùng
   const fetchUsers = async () => {
@@ -37,59 +42,59 @@ const UsersManagement = () => {
     fetchUsers();
   }, []);
 
-  // ✅ Thêm người dùng
+  // ✅ Mở modal thêm mới
   const handleAdd = () => {
     setSelectedUser(null);
-    setIsViewMode(false);
     setModalMode("create");
     setIsModalOpen(true);
   };
 
-  // ✅ Sửa người dùng
+  // ✅ Mở modal sửa
   const handleEdit = (user) => {
     setSelectedUser(user);
-    setIsViewMode(false);
     setModalMode("edit");
     setIsModalOpen(true);
   };
 
-  // ✅ Xem thông tin người dùng
+  // ✅ Mở modal xem chi tiết
   const handleView = (user) => {
     setSelectedUser(user);
-    setIsViewMode(true);
     setModalMode("view");
     setIsModalOpen(true);
   };
 
-  // ✅ Xóa người dùng
-  const handleDeleteConfirm = async (user) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa người dùng "${user.fullName}"?`))
-      return;
+  // ✅ Mở ConfirmDialog
+  const handleDeleteClick = (user) => {
+    setToDelete(user);
+    setConfirmOpen(true);
+  };
+
+  // ✅ Thực sự xóa khi xác nhận
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeletingId(toDelete.customerId);
+    setConfirmOpen(false);
     try {
-      await adminApi.deleteCustomer(user.customerId);
+      await adminApi.deleteCustomer(toDelete.customerId);
       toast.success("Xóa người dùng thành công!");
-      setUsers((prev) => prev.filter((u) => u.customerId !== user.customerId));
+      setUsers((prev) =>
+        prev.filter((u) => u.customerId !== toDelete.customerId)
+      );
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Không thể xóa người dùng");
+    } finally {
+      setDeletingId(null);
+      setToDelete(null);
     }
   };
 
-  // ✅ Cập nhật danh sách sau khi thêm / sửa
-  const handleSave = (user) => {
-    if (!user) return;
-    setUsers((prev) => {
-      const exists = prev.find((u) => u.customerId === user.customerId);
-      if (exists) {
-        return prev.map((u) =>
-          u.customerId === user.customerId ? { ...u, ...user } : u
-        );
-      }
-      return [user, ...prev];
-    });
+  // ✅ Gọi lại danh sách sau khi thêm/sửa
+  const handleSave = async () => {
+    await fetchUsers();
   };
 
-  // ✅ Lọc và tìm kiếm
+  // ✅ Lọc + tìm kiếm
   const filteredUsers = users.filter((u) => {
     const matchSearch =
       u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,7 +107,7 @@ const UsersManagement = () => {
     return matchSearch && matchStatus;
   });
 
-  // ✅ Tính phân trang
+  // ✅ Phân trang
   const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE);
   const currentData = filteredUsers.slice(
     (page - 1) * PAGE_SIZE,
@@ -159,135 +164,187 @@ const UsersManagement = () => {
       </div>
 
       {/* --- Danh sách người dùng --- */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
+          </div>
+        )}
+
         <table className="min-w-full text-sm">
           <thead className="bg-indigo-50 text-indigo-700 text-left">
-  <tr>
-    <th className="px-4 py-3 font-semibold">STT</th>
-    <th className="px-4 py-3 font-semibold">Avatar</th>
-    <th className="px-4 py-3 font-semibold">Họ tên</th>
-    <th className="px-4 py-3 font-semibold">Email</th>
-    <th className="px-4 py-3 font-semibold">SĐT</th>
-    <th className="px-4 py-3 font-semibold">Role</th>
-    <th className="px-4 py-3 font-semibold">Trạng thái</th>
-    <th className="px-4 py-3 font-semibold text-center">Hành động</th>
-  </tr>
-</thead>
-<tbody>
-  {loading ? (
-    <tr>
-      <td colSpan="8" className="text-center py-6 text-gray-500">
-        Đang tải danh sách...
-      </td>
-    </tr>
-  ) : currentData.length === 0 ? (
-    <tr>
-      <td colSpan="8" className="text-center py-6 text-gray-500">
-        Không có người dùng nào phù hợp.
-      </td>
-    </tr>
-  ) : (
-    currentData.map((user, index) => (
-      <tr key={user.customerId} className="border-t hover:bg-indigo-50/30 transition">
-        <td className="px-4 py-3">{(page - 1) * PAGE_SIZE + index + 1}</td>
-        <td className="px-4 py-3">
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt={user.fullName}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
-              ?
-            </div>
-          )}
-        </td>
-        <td className="px-4 py-3">{user.fullName}</td>
-        <td className="px-4 py-3">{user.email}</td>
-        <td className="px-4 py-3">{user.phone}</td>
-        <td className="px-4 py-3">{user.roleUser || "User"}</td>
-        <td className="px-4 py-3">
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              user.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-            }`}
-          >
-            {user.isActive ? "Kích hoạt" : "Khóa"}
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2 justify-center">
-            <button
-              onClick={() => handleView(user)}
-              className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
-              title="Xem"
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              onClick={() => handleEdit(user)}
-              className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
-              title="Sửa"
-            >
-              <Edit2 size={16} />
-            </button>
-            <button
-              onClick={() => handleDeleteConfirm(user)}
-              className="p-2 rounded-lg hover:bg-red-50 text-red-600"
-              title="Xóa"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-    ))
-  )}
-</tbody>
+            <tr>
+              <th className="px-4 py-3 font-semibold">STT</th>
+              <th className="px-4 py-3 font-semibold">Avatar</th>
+              <th className="px-4 py-3 font-semibold">Họ tên</th>
+              <th className="px-4 py-3 font-semibold">Email</th>
+              <th className="px-4 py-3 font-semibold">SĐT</th>
+              <th className="px-4 py-3 font-semibold">Role</th>
+              <th className="px-4 py-3 font-semibold">Trạng thái</th>
+              <th className="px-4 py-3 font-semibold text-center">Hành động</th>
+            </tr>
+          </thead>
 
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan="8" className="text-center py-6 text-gray-500">
+                  Đang tải danh sách...
+                </td>
+              </tr>
+            ) : currentData.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="text-center py-6 text-gray-500">
+                  Không có người dùng nào phù hợp.
+                </td>
+              </tr>
+            ) : (
+              currentData.map((user, index) => (
+                <tr
+                  key={user.customerId}
+                  className="border-t hover:bg-indigo-50/30 transition"
+                >
+                  <td className="px-4 py-3">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                  <td className="px-4 py-3">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.fullName}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        ?
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{user.fullName}</td>
+                  <td className="px-4 py-3">{user.email}</td>
+                  <td className="px-4 py-3">{user.phone}</td>
+                  <td className="px-4 py-3">{user.roleUser || "User"}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {user.isActive ? "Kích hoạt" : "Khóa"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 justify-center">
+                      <button
+                        onClick={() => handleView(user)}
+                        className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
+                        title="Xem"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(user)}
+                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+                        title="Sửa"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(user)}
+                        className={`p-2 rounded-lg hover:bg-red-50 text-red-600 ${
+                          deletingId === user.customerId
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                        disabled={deletingId === user.customerId}
+                        title="Xóa"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
         </table>
       </div>
 
       {/* --- Phân trang --- */}
       {!loading && filteredUsers.length > 0 && (
-        <div className="flex items-center justify-between mt-6 text-sm">
-          <div className="text-gray-600">
-            Hiển thị{" "}
-            {Math.min(page * PAGE_SIZE, filteredUsers.length)} /{" "}
-            {filteredUsers.length} bản ghi
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
+          {/* Thông tin bản ghi */}
+          <div className="text-gray-600 font-medium">
+            Hiển thị <span className="text-indigo-600 font-bold">{Math.min(page * PAGE_SIZE, filteredUsers.length)}</span> / {filteredUsers.length} bản ghi
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Nút phân trang */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Nút Đầu */}
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              « Đầu
+            </button>
+
+            {/* Nút Trước */}
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Trước
             </button>
-            <span className="px-2">
-              Trang <strong>{page}</strong> / {totalPages}
+
+            {/* Hiển thị Trang hiện tại */}
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
+              {page} / {totalPages}
             </span>
+
+            {/* Nút Sau */}
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Sau →
+            </button>
+
+            {/* Nút Cuối */}
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cuối »
             </button>
           </div>
         </div>
       )}
 
-      {/* --- Modal thêm/sửa/xem --- */}
+
+
+      {/* --- Modal Thêm/Sửa/Xem --- */}
       {isModalOpen && (
         <UsersModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           user={selectedUser}
           onSave={handleSave}
-          isView={modalMode === "view"} 
-          isCreate={modalMode === "create"} 
+          isCreate={modalMode === "create"}
+          isView={modalMode === "view"}
+        />
+      )}
+
+      {/* --- ConfirmDialog Xóa --- */}
+      {confirmOpen && (
+        <ConfirmDialog
+          title="Xác nhận xóa"
+          message={`Bạn có chắc chắn muốn xóa Người dùng "${toDelete?.fullName}"?`}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={handleDelete}
         />
       )}
     </div>

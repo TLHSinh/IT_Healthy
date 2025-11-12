@@ -10,6 +10,8 @@ function getToken() {
   );
 }
 
+
+
 // 🧾 Cấu hình headers
 const headers = () => ({
   "Content-Type": "application/json",
@@ -24,55 +26,19 @@ export const adminApi = {
   getStaffs: () => axios.get(`${BASE}/staffs`, { headers: headers() }),
   getStaffById: (id) => axios.get(`${BASE}/staffs/${id}`, { headers: headers() }),
   
-  createStaff: async (payload) => {
-  try {
-    const formatted = {
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-      gender: payload.gender,
-      dob: payload.dob,
-      roleStaff: payload.roleStaff,
-      isActive: payload.isActive ?? true,
-      storeId: payload.storeId || payload.StoreId || 1,
-      hireDate: payload.hireDate || new Date().toISOString(),
-      PasswordHash: payload.password || payload.PasswordHash || "",
-    };
-    const res = await axios.post(`${BASE}/staffs`, formatted, { headers: headers() });
-    return res.data;
-  } catch (err) {
-    const msg =
-      err.response?.data?.messages?.join("\n") ||
-      err.response?.data?.message ||
-      "❌ Tạo nhân viên thất bại";
-    throw new Error(msg); // ❌ bỏ alert, ✅ ném lỗi để toast xử lý
-  }
+  createStaff: async (payload, isFormData = false) => {
+  const config = { headers: {} };
+  if (isFormData) config.headers["Content-Type"] = "multipart/form-data";
+  const res = await axios.post(`${BASE}/staffs`, payload, config);
+  return res.data;
 },
-  updateStaff: async (id, payload) => {
-    try {
-      const formatted = {
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        gender: payload.gender,
-        dob: payload.dob,
-        roleStaff: payload.roleStaff,
-        isActive: payload.isActive ?? true,
-        storeId: payload.storeId || payload.StoreId || 1,
-        hireDate: payload.hireDate || new Date().toISOString(),
-        PasswordHash: payload.password || payload.PasswordHash || "",
-      };
-      const res = await axios.put(`${BASE}/staffs/${id}`, formatted, { headers: headers() });
-      return res.data;
-    } catch (err) {
-      const msg =
-        err.response?.data?.messages?.join("\n") ||
-        err.response?.data?.message ||
-        "❌ Cập nhật nhân viên thất bại";
-      alert(msg);
-      return null;
-    }
-  },
+
+updateStaff: async (id, payload, isFormData = false) => {
+  const config = { headers: {} };
+  if (isFormData) config.headers["Content-Type"] = "multipart/form-data";
+  const res = await axios.put(`${BASE}/staffs/${id}`, payload, config);
+  return res.data;
+},
   deleteStaff: async (id) => {
     try {
       const res = await axios.delete(`${BASE}/staffs/${id}`, { headers: headers() });
@@ -87,6 +53,7 @@ export const adminApi = {
   // ====================== 🏬 CỬA HÀNG ======================
   getStores: () => axios.get(`${BASE}/stores`, { headers: headers() }),
   getStoreById: (id) => axios.get(`${BASE}/stores/${id}`, { headers: headers() }),
+  
   
   createStore: async (payload) => {
   try {
@@ -162,10 +129,11 @@ deleteStore: async (id) => {
 
 
   // ====================== 👤 NGƯỜI DÙNG ======================
-getCustomers: () => axios.get(`${BASE}/customers`, { headers: headers() }),
-getCustomerById: (id) => axios.get(`${BASE}/customers/${id}`, { headers: headers() }),
+ getCustomers: () => axios.get(`${BASE}/customers`, { headers: headers() }),
+  getCustomerById: (id) =>
+    axios.get(`${BASE}/customers/${id}`, { headers: headers() }),
 
-createCustomer: async (form) => {
+  createCustomer: async (form) => {
   try {
     const formData = new FormData();
     formData.append("FullName", form.fullName || "");
@@ -176,7 +144,7 @@ createCustomer: async (form) => {
     if (form.dob) formData.append("DOB", form.dob);
     formData.append("RoleUser", form.roleUser || "Customer");
     formData.append("IsActive", form.isActive ? "true" : "false");
-    if (form.avatarFile) formData.append("AvatarFile", form.avatarFile);
+    if (form.avatarFile) formData.append("Avatar", form.avatarFile); // ✅ Đổi lại đúng tên field
 
     const res = await axios.post(`${BASE}/customers`, formData, {
       headers: {
@@ -200,13 +168,13 @@ updateCustomer: async (id, form) => {
     const formData = new FormData();
     formData.append("FullName", form.fullName || "");
     formData.append("Phone", form.phone || "");
-    formData.append("PasswordHash", form.passwordHash || form.oldPassword || "123456"); // ✅ Luôn gửi
+    formData.append("PasswordHash", form.passwordHash || form.oldPassword || "123456");
     formData.append("Email", form.email || "");
     formData.append("Gender", form.gender || "Male");
     if (form.dob) formData.append("DOB", form.dob);
     formData.append("RoleUser", form.roleUser || "Customer");
     formData.append("IsActive", form.isActive ? "true" : "false");
-    if (form.avatarFile) formData.append("AvatarFile", form.avatarFile);
+    if (form.avatarFile) formData.append("Avatar", form.avatarFile); // ✅ Đổi lại đúng tên field
 
     const res = await axios.put(`${BASE}/customers/${id}`, formData, {
       headers: {
@@ -226,17 +194,18 @@ updateCustomer: async (id, form) => {
 },
 
 
-deleteCustomer: async (id) => {
-  try {
-    await axios.delete(`${BASE}/customers/${id}`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-    return true;
-  } catch (err) {
-    const msg = err.response?.data?.message || "❌ Không thể xóa người dùng";
-    throw new Error(msg);
-  }
-},
+  deleteCustomer: async (id) => {
+    try {
+      await axios.delete(`${BASE}/customers/${id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      return true;
+    } catch (err) {
+      console.error("deleteCustomer error:", err.response?.data || err);
+      const msg = err.response?.data?.message || "❌ Không thể xóa người dùng";
+      throw new Error(msg);
+    }
+  },
 
   // ====================== 🛒 SẢN PHẨM ======================
  getAllProducts: () =>
