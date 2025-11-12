@@ -3,16 +3,16 @@ import { adminApi } from "../../api/adminApi";
 import { useAuthAdmin } from "../../hooks/useAuthAdmin";
 import { Toaster, toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Users, Store, Package } from "lucide-react";
+import { Users, Store, Package, TrendingUp } from "lucide-react";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
   ResponsiveContainer,
   LabelList,
+  Cell,
 } from "recharts";
 import axios from "axios";
 
@@ -24,29 +24,33 @@ const AdminDashboard = () => {
   const [totalStaff, setTotalStaff] = useState(0);
   const [totalStores, setTotalStores] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
   const [stores, setStores] = useState([]);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [storeIngredients, setStoreIngredients] = useState([]);
-  const [prevStoreIngredients, setPrevStoreIngredients] = useState([]);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [loadingInventory, setLoadingInventory] = useState(false);
+  const [revenueData, setRevenueData] = useState([]);
 
   // Fetch tổng quan dashboard
   useEffect(() => {
     const fetchDashboard = async () => {
       setLoadingDashboard(true);
       try {
-        const staffRes = await adminApi.getStaffs();
+        const [staffRes, storeRes, productRes] = await Promise.all([
+          adminApi.getStaffs(),
+          adminApi.getStores(),
+          adminApi.getAllProducts(),
+        ]);
+
         const staffs = staffRes.data || [];
         setTotalStaff(staffs.filter((s) => s.roleStaff?.toLowerCase() === "staff").length);
 
-        const storeRes = await adminApi.getStores();
         const storesData = storeRes.data || [];
         setTotalStores(storesData.length);
         setStores(storesData);
         if (storesData.length > 0 && !selectedStoreId) setSelectedStoreId(storesData[0].storeId);
 
-        const productRes = await adminApi.getAllProducts();
         const products = productRes.data || [];
         setTotalProducts(products.length);
       } catch (err) {
@@ -65,11 +69,8 @@ const AdminDashboard = () => {
       if (!storeId) return;
       setLoadingInventory(true);
       try {
-        const res = await axios.get(
-          `http://localhost:5000/api/storeinventory/store/${storeId}`
-        );
+        const res = await axios.get(`http://localhost:5000/api/storeinventory/store/${storeId}`);
         const data = res.data || [];
-
         const transformed = data.map((item) => {
           const quantity = item.stockQuantity || 0;
           const threshold = item.reorderLevel || 100;
@@ -79,12 +80,9 @@ const AdminDashboard = () => {
             quantity,
             threshold,
             percent,
-            unit: "g",
+            unit: item.unit || "g",
           };
         });
-
-        // Lưu dữ liệu cũ trước khi cập nhật
-        setPrevStoreIngredients(storeIngredients);
         setStoreIngredients(transformed);
       } catch (err) {
         console.error("❌ Lỗi fetch tồn kho cửa hàng:", err);
@@ -96,6 +94,41 @@ const AdminDashboard = () => {
     };
     fetchStoreInventory(selectedStoreId);
   }, [selectedStoreId]);
+
+  // Fetch doanh thu và tính top 5
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/revenue/report");
+        const data = res.data || [];
+
+        const revenueByStore = data.reduce((acc, item) => {
+          if (!acc[item.storeId]) {
+            acc[item.storeId] = {
+              storeId: item.storeId,
+              storeName: item.storeName,
+              totalRevenue: 0,
+            };
+          }
+          acc[item.storeId].totalRevenue += item.totalRevenue;
+          return acc;
+        }, {});
+
+        let aggregatedData = Object.values(revenueByStore);
+        aggregatedData.sort((a, b) => b.totalRevenue - a.totalRevenue);
+        const top5Revenue = aggregatedData.slice(0, 5);
+
+        setRevenueData(top5Revenue);
+        const total = aggregatedData.reduce((sum, r) => sum + r.totalRevenue, 0);
+        setTotalRevenue(total);
+      } catch (err) {
+        console.error("❌ Lỗi tải dữ liệu doanh thu:", err);
+        toast.error("Không thể tải dữ liệu doanh thu!");
+      }
+    };
+
+    fetchRevenue();
+  }, []);
 
   const cards = [
     {
@@ -122,13 +155,29 @@ const AdminDashboard = () => {
       icon: <Package className="h-12 w-12 text-white" />,
       link: "/admin/products",
     },
+    {
+      title: "Tổng doanh thu",
+      value: totalRevenue,
+      color: "bg-purple-500",
+      hover: "hover:bg-purple-600",
+      icon: <TrendingUp className="h-12 w-12 text-white" />,
+      link: "/admin/revenue",
+    },
   ];
 
-  // Màu bar theo % tồn kho
-  const getBarColor = (percent) => {
-    if (percent <= 30) return "#FF4D4F"; // đỏ
-    if (percent <= 70) return "#FFC107"; // vàng
-    return "#52C41A"; // xanh
+  // Custom label component for warning icon
+  const WarningLabel = (props) => {
+    const { x, y, width, payload } = props;
+    // only show warning if quantity < threshold
+    if (!payload || payload.quantity >= payload.threshold) return null;
+    // place icon slightly above top of bar
+    const centerX = x + width / 2;
+    const iconY = y - 8;
+    return (
+      <text x={centerX} y={iconY} textAnchor="middle" fill="#DC2626" fontSize={16}>
+        ⚠️
+      </text>
+    );
   };
 
   return (
@@ -140,7 +189,7 @@ const AdminDashboard = () => {
       </h2>
 
       {/* GRID CARD */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {cards.map((card, index) => (
           <div
             key={index}
@@ -150,8 +199,11 @@ const AdminDashboard = () => {
             <div>
               <p className="text-lg opacity-90 font-medium">{card.title}</p>
               <h3 className="text-4xl font-bold mt-2">
-                {loadingDashboard ? "..." : card.value}
+                {loadingDashboard ? "..." : card.value.toLocaleString()}
               </h3>
+              {card.title === "Tổng doanh thu" && (
+                <p className="text-sm mt-1 opacity-80">Click để xem chi tiết</p>
+              )}
             </div>
             <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
               {card.icon}
@@ -160,98 +212,155 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Dropdown chọn cửa hàng */}
-      <div className="mt-12 mb-4">
-        <label className="mr-2 font-medium">Chọn cửa hàng:</label>
-        <select
-          className="border px-3 py-1 rounded"
-          value={selectedStoreId || ""}
-          onChange={(e) => setSelectedStoreId(Number(e.target.value))}
-        >
-          {stores.map((store) => (
-            <option key={store.storeId} value={store.storeId}>
-              {store.storeName || `Cửa hàng ${store.storeId}`}
-            </option>
-          ))}
-        </select>
+      {/* Biểu đồ doanh thu top 5 */}
+      <div className="bg-white p-6 mt-12 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+        <h3 className="text-2xl font-bold mb-4 text-gray-800">
+          📊 Doanh thu top 5 cửa hàng
+        </h3>
+        {loadingDashboard || revenueData.length === 0 ? (
+          <p>Đang tải dữ liệu doanh thu...</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={revenueData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+            >
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FFD700" stopOpacity={1} />      {/* Vàng kim thuần */}
+    <stop offset="50%" stopColor="#FFEA70" stopOpacity={0.85} />  {/* Vàng sáng trung gian */}
+    <stop offset="95%" stopColor="#FFF8DC" stopOpacity={0.6} />   {/* Vàng nhạt ánh kim */}
+                </linearGradient>
+              </defs>
+
+              <XAxis
+                dataKey="storeName"
+                tick={{ fontSize: 14, fontWeight: "bold" }}
+                tickLine={false}
+                axisLine={{ stroke: "#e5e7eb" }}
+              />
+              <YAxis tick={{ fontSize: 14 }} />
+              <Tooltip
+                formatter={(value) =>
+                  new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(value)
+                }
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                }}
+              />
+              <Bar
+                dataKey="totalRevenue"
+                radius={[10, 10, 0, 0]}
+                fill="url(#colorRevenue)"
+                animationDuration={800}
+                barSize={300}
+              >
+                <LabelList
+                  dataKey="totalRevenue"
+                  position="top"
+                  formatter={(value) =>
+                    new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(value)
+                  }
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* Biểu đồ tồn kho */}
-<div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-  <h3 className="text-2xl font-bold mb-4 text-gray-800">
-    📊 Tồn kho cửa hàng
-  </h3>
-  {loadingInventory ? (
-    <p>Đang tải dữ liệu tồn kho...</p>
-  ) : storeIngredients.length === 0 ? (
-    <p>Không có dữ liệu tồn kho</p>
-  ) : (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart
-        data={storeIngredients}
-        margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-        barCategoryGap="20%"
-      >
-        {/* Gradient màu bar */}
-        <defs>
-          <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#52C41A" stopOpacity={0.8} />
-            <stop offset="100%" stopColor="#52C41A" stopOpacity={0.3} />
-          </linearGradient>
-        </defs>
+      {/* Tồn kho cửa hàng (cập nhật: hiển thị cảnh báo khi thiếu) */}
+      <div className="bg-white p-6 mt-12 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+        <h3 className="text-2xl font-bold mb-4 text-gray-800">📦 Tồn kho cửa hàng</h3>
+        {loadingInventory ? (
+          <p>Đang tải dữ liệu tồn kho...</p>
+        ) : storeIngredients.length === 0 ? (
+          <p>Không có dữ liệu tồn kho</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={storeIngredients}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+              barCategoryGap="25%"
+            >
+              <defs>
+                <linearGradient id="colorStockGood" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34D399" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#6EE7B7" stopOpacity={0.7} />
+                </linearGradient>
+                <linearGradient id="colorStockWarn" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#FBBF24" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#FCD34D" stopOpacity={0.7} />
+                </linearGradient>
+                <linearGradient id="colorStockLow" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F87171" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#FCA5A5" stopOpacity={0.7} />
+                </linearGradient>
+              </defs>
 
-        <XAxis
-          dataKey="name"
-          tick={{ fontSize: 12 }}
-          tickLine={false}
-          axisLine={{ stroke: "#ccc" }}
-        />
-        <YAxis />
-        <Tooltip
-          contentStyle={{
-            borderRadius: "10px",
-            border: "none",
-            boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-            backgroundColor: "#fff",
-          }}
-          formatter={(value, name, props) => {
-            const prev = prevStoreIngredients.find(p => p.name === props.payload.name);
-            return [
-              `${value || 0} ${props.payload?.unit || ""} (trc: ${prev?.quantity || 0})`,
-              name
-            ];
-          }}
-        />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 12, fontWeight: "bold" }}
+                tickLine={false}
+                axisLine={{ stroke: "#e5e7eb" }}
+              />
+              <YAxis />
+              <Tooltip
+                formatter={(value, name, props) => {
+                  const percent = props.payload?.percent || 0;
+                  const unit = props.payload?.unit || "";
+                  return [`${value} ${unit} (${percent.toFixed(0)}%)`, name];
+                }}
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                }}
+              />
 
-        <Bar
-          dataKey="quantity"
-          isAnimationActive={true}
-          animationDuration={800}
-          radius={[8, 8, 0, 0]} // bo tròn bar
-        >
-          {storeIngredients.map((entry) => (
-            <Cell
-              key={entry.name}
-              fill="url(#barGradient)"
-              stroke={entry.quantity < entry.threshold ? "#FF4D4F" : "none"}
-              strokeWidth={entry.quantity < entry.threshold ? 2 : 0}
-            />
-          ))}
-          <LabelList
-            dataKey="quantity"
-            position="top"
-            formatter={(value, entry) => `${value || 0} ${entry?.unit || ""}`}
-          />
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  )}
-</div>
+              <Bar
+                dataKey="quantity"
+                radius={[10, 10, 0, 0]}
+                animationDuration={800}
+              >
+                {storeIngredients.map((entry) => {
+                  // gradient fill
+                  let fillColor = "url(#colorStockGood)";
+                  if (entry.percent <= 30) fillColor = "url(#colorStockLow)";
+                  else if (entry.percent <= 70) fillColor = "url(#colorStockWarn)";
 
-
-      {/* FOOTER */}
-      <div className="mt-12 text-center text-gray-500 text-sm">
-        © {new Date().getFullYear()} IT Healthy Admin Dashboard
+                  // stroke if below threshold
+                  const isLow = entry.quantity < entry.threshold;
+                  return (
+                    <Cell
+                      key={entry.name}
+                      fill={fillColor}
+                      stroke={isLow ? "#DC2626" : "none"}
+                      strokeWidth={isLow ? 3 : 0}
+                      rx={8}
+                      ry={8}
+                    />
+                  );
+                })}
+                {/* Label for quantity value */}
+                <LabelList
+                  dataKey="quantity"
+                  position="top"
+                  formatter={(value, entry) => `${value} ${entry?.unit || ""}`}
+                />
+                {/* Custom label to show warning icon for low-stock items */}
+                <LabelList content={WarningLabel} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

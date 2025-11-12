@@ -9,6 +9,7 @@ import {
   ChevronUp,
   Package,
   Boxes,
+  Coins,
 } from "lucide-react";
 import HELogo from "../../assets/HE.png";
 
@@ -136,6 +137,21 @@ const AdminSidebar = ({ isOpen }) => {
         >
           <Store size={20} />
           {isOpen && <span>Quản lý Cửa hàng</span>}
+        </NavLink>
+
+        {/* Doanh thu */}
+        <NavLink
+          to="/admin/revenue"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              isActive
+                ? "bg-orange-100 text-orange-600 font-semibold"
+                : "text-gray-700 hover:bg-orange-50"
+            }`
+          }
+        >
+          <Coins size={20} />
+          {isOpen && <span>Quản lý Doanh Thu</span>}
         </NavLink>
 
         {/* Sản phẩm */}
