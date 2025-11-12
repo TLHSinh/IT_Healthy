@@ -39,6 +39,10 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
   const [modalProcessing, setModalProcessing] = useState(false);
   const [form] = Form.useForm();
 
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
+
   // Fetch products
   const fetchProducts = async () => {
     try {
@@ -52,7 +56,6 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
     }
   };
 
-  // Fetch all products
   const fetchAllProducts = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/products/all-products`);
@@ -76,7 +79,6 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
   };
   const cancel = () => setEditingKey("");
 
-  // Save edited product
   const save = async (key) => {
     try {
       const row = await form.validateFields();
@@ -98,7 +100,6 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
     }
   };
 
-  // Add new product
   const handleAdd = async () => {
     if (!newProduct.productId) return toast.error("Vui lòng chọn sản phẩm");
     try {
@@ -135,13 +136,14 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
 
   const handleRefresh = () => fetchProducts();
 
-  // Filtered products
   const filteredProducts = products.filter(
     (p) =>
       p.productName?.toLowerCase().includes(searchText.toLowerCase()) ||
       p.productId?.toString().includes(searchText) ||
       p.descriptionProduct?.toLowerCase().includes(searchText.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
 
   const columns = [
     { title: "ID", dataIndex: "productId", key: "productId", width: 80 },
@@ -191,7 +193,6 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
         className="rounded-xl"
         bodyStyle={{ maxHeight: '600px', overflowY: 'auto', padding: '1.5rem', position: 'relative' }}
       >
-        {/* Overlay spinner */}
         {modalProcessing && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50 rounded-xl">
             <Spin size="large" />
@@ -260,7 +261,19 @@ const StoreProductsModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
             bordered
             components={{ body: { cell: EditableCell } }}
             className="shadow-lg rounded-xl"
-            pagination={{ pageSize: 8, position: ['bottomCenter'] }}
+            pagination={{
+              position: ['bottomCenter'],
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredProducts.length,
+              onChange: (page) => setCurrentPage(page),
+              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} bản ghi`,
+              itemRender: (_, type, originalElement) => {
+                if (type === 'prev') return <Button size="small" onClick={() => setCurrentPage(1)}>Đầu</Button>;
+                if (type === 'next') return <Button size="small" onClick={() => setCurrentPage(totalPages)}>Cuối</Button>;
+                return originalElement;
+              }
+            }}
           />
         </Form>
       </Modal>

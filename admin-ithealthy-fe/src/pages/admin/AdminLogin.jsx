@@ -4,6 +4,7 @@ import { adminApi } from "../../api/adminApi";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import bgLogin from "../../assets/bg_login.jpg"; // import ảnh
+import HashLoader from "react-spinners/HashLoader";
 
 const AdminLogin = () => {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
@@ -122,12 +123,12 @@ const AdminLogin = () => {
           </div>
 
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold hover:opacity-90 transition-all"
-          >
-            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-          </button>
+              disabled={loading}
+              type="submit"
+              className="w-full bg-gradient-to-r from-purple-500 via-purple-400 to-purple-400 text-white font-semibold py-2 rounded-md shadow-lg hover:brightness-110 hover:scale-[1.02] transition-all duration-300"
+            >
+              {loading ? <HashLoader size={30} color="#fff" /> : "Đăng nhập"}
+            </button>
         </form>
 
         <p className="text-xs text-center text-gray-400 mt-4">

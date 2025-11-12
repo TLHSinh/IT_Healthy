@@ -24,11 +24,12 @@ namespace ITHealthy.Controllers
         }
 
         // GET: api/staffs
-        [HttpGet]
+       [HttpGet]
         public async Task<IActionResult> GetAllStaffs()
         {
+            // Lấy danh sách nhân viên kèm thông tin cửa hàng
             var staffs = await _context.Staff
-                .Include(s => s.Store) // 🔹 lấy kèm thông tin cửa hàng
+                .Include(s => s.Store)
                 .Select(s => new
                 {
                     s.StaffId,
@@ -37,12 +38,22 @@ namespace ITHealthy.Controllers
                     s.Phone,
                     s.RoleStaff,
                     s.IsActive,
+                    s.Avatar,
+                    s.Gender,
+                    Dob = s.Dob,
+                    HireDate = s.HireDate,
+                    StoreId = s.StoreId,
                     StoreName = s.Store != null ? s.Store.StoreName : null
                 })
                 .ToListAsync();
 
+            // Trả về trực tiếp mảng để dashboard cũ không lỗi
             return Ok(staffs);
         }
+
+
+
+
 
 
         // GET: api/staffs/5
@@ -50,28 +61,86 @@ namespace ITHealthy.Controllers
         public async Task<IActionResult> GetStaffById(int id)
         {
             var staff = await _context.Staff
-        .Include(s => s.Store)
-        .Where(s => s.StaffId == id)
-        .Select(s => new
-        {
-            s.StaffId,
-            s.FullName,
-            s.Email,
-            s.Phone,
-            s.RoleStaff,
-            s.IsActive,
-            StoreName = s.Store != null ? s.Store.StoreName : null
-        })
-        .FirstOrDefaultAsync();
+                .Include(s => s.Store)
+                .Where(s => s.StaffId == id)
+                .Select(s => new
+                {
+                    s.StaffId,
+                    s.FullName,
+                    s.Email,
+                    s.Phone,
+                    s.RoleStaff,
+                    s.IsActive,
+                    s.Gender,
+                    Dob = s.Dob,
+                    HireDate = s.HireDate,
+                    StoreId = s.StoreId,
+                    StoreName = s.Store != null ? s.Store.StoreName : null,
+                    Avatar = s.Avatar
+                })
+                .FirstOrDefaultAsync();
 
             if (staff == null)
                 return NotFound(new { message = "Không tìm thấy nhân viên!" });
 
             return Ok(staff);
         }
+
+
         // POST: api/staffs
+        // [HttpPost]
+        // public async Task<ActionResult<Staff>> Create([FromForm] StaffRequestDTO staff)
+        // {
+        //     if (!ModelState.IsValid)
+        //         return BadRequest(ModelState);
+
+        //     var errors = new List<string>();
+
+        //     if (await _context.Staff.AnyAsync(s => s.Email == staff.Email))
+        //         errors.Add("Email đã tồn tại trong hệ thống.");
+
+        //     if (await _context.Staff.AnyAsync(s => s.Phone == staff.Phone))
+        //         errors.Add("Số điện thoại đã tồn tại trong hệ thống.");
+
+        //     if (errors.Count > 0)
+        //         return BadRequest(new { messages = errors });
+
+        //     string? avatarUrl = null;
+        //     if (staff.Avatar != null && staff.Avatar.Length > 0)
+        //     {
+        //         avatarUrl = await _cloudinaryService.UploadImageAsync(staff.Avatar);
+        //     }
+
+        //     staff.PasswordHash = AuthController.HashPassword(staff.PasswordHash);
+        //     // staff.IsActive = true;
+
+        //     var newStaff = new Staff
+        //     {
+        //         StoreId = staff.StoreId,
+        //         FullName = staff.FullName,
+        //         Phone = staff.Phone,
+        //         Email = staff.Email,
+        //         PasswordHash = staff.PasswordHash,
+        //         Gender = staff.Gender,
+        //         Dob = staff.Dob,
+        //         Avatar = avatarUrl,
+        //         RoleStaff = staff.RoleStaff,
+        //         HireDate = staff.HireDate,
+        //     };
+                
+        //         _context.Staff.Add(newStaff);
+        //     await _context.SaveChangesAsync();
+                
+        //     var store = await _context.Stores.FindAsync(staff.StoreId);
+
+        //     return Ok(new
+        //     {
+        //         message = "Tạo nhân viên thành công!",
+        //         data = newStaff
+        //     });
+        // }
         [HttpPost]
-        public async Task<ActionResult<Staff>> Create([FromForm] StaffRequestDTO staff)
+        public async Task<ActionResult> Create([FromForm] StaffRequestDTO staff)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -94,7 +163,6 @@ namespace ITHealthy.Controllers
             }
 
             staff.PasswordHash = AuthController.HashPassword(staff.PasswordHash);
-            // staff.IsActive = true;
 
             var newStaff = new Staff
             {
@@ -108,19 +176,37 @@ namespace ITHealthy.Controllers
                 Avatar = avatarUrl,
                 RoleStaff = staff.RoleStaff,
                 HireDate = staff.HireDate,
+                IsActive = true // nếu muốn mặc định đang làm
             };
-                
-                _context.Staff.Add(newStaff);
-            await _context.SaveChangesAsync();
-                
-            var store = await _context.Stores.FindAsync(staff.StoreId);
 
+            _context.Staff.Add(newStaff);
+            await _context.SaveChangesAsync();
+
+            // Load thông tin cửa hàng
+            var store = await _context.Stores.FindAsync(newStaff.StoreId);
+
+            // Trả về object giống GetAllStaffs
             return Ok(new
             {
                 message = "Tạo nhân viên thành công!",
-                data = newStaff
+                data = new
+                {
+                    newStaff.StaffId,
+                    newStaff.FullName,
+                    newStaff.Email,
+                    newStaff.Phone,
+                    newStaff.RoleStaff,
+                    newStaff.IsActive,
+                    newStaff.Avatar,
+                    newStaff.Gender,
+                    Dob = newStaff.Dob,
+                    HireDate = newStaff.HireDate,
+                    StoreId = newStaff.StoreId,
+                    StoreName = store?.StoreName
+                }
             });
         }
+
         // // PUT: api/staffs/5
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromForm] StaffRequestDTO updatedStaff)
@@ -176,6 +262,8 @@ namespace ITHealthy.Controllers
                 data = staff
             });
         }
+
+        
         // DELETE: api/staffs/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)

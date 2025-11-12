@@ -111,7 +111,7 @@ const StoreManagement = () => {
   const currentPageData = filteredStores.slice(startIndex, endIndex);
 
   return (
-    <div className="min-h-screen flex flex-col p-4 bg-gray-50">
+    <div >
       <Toaster position="top-right" reverseOrder={false} />
 
       {/* Main content */}
@@ -264,31 +264,59 @@ const StoreManagement = () => {
 
         {/* Pagination */}
         {!loading && filteredStores.length > 0 && (
-          <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
-            <div className="text-gray-600">
-              Hiển thị <strong>{Math.min(filteredStores.length, page * PAGE_SIZE)}</strong> / {filteredStores.length} bản ghi
+          <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
+            {/* Thông tin bản ghi */}
+            <div className="text-gray-600 font-medium">
+              Hiển thị <span className="text-indigo-600 font-bold">{Math.min(filteredStores.length, page * PAGE_SIZE)}</span> / {filteredStores.length} bản ghi
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Nút phân trang */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Nút Đầu */}
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                « Đầu
+              </button>
+
+              {/* Nút Trước */}
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+                className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← Trước
               </button>
-              <span className="px-2">
-                Trang <strong>{page}</strong> / {totalPages}
+
+              {/* Hiển thị Trang hiện tại */}
+              <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
+                {page} / {totalPages}
               </span>
+
+              {/* Nút Sau */}
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+                className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Sau →
+              </button>
+
+              {/* Nút Cuối */}
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cuối »
               </button>
             </div>
           </div>
         )}
+
+
 
         {/* Confirm delete */}
         {confirmOpen && storeToDelete && (

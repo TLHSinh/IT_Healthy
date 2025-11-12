@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import { toast } from "react-toastify";
 import { adminApi } from "../../api/adminApi";
-import { UserPlus, EyeIcon, Edit3 } from "lucide-react";
+import { UserPlus, EyeIcon, Edit3, EyeOff } from "lucide-react";
 
 const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
   const [form, setForm] = useState({
@@ -18,6 +18,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
   });
 
   const [preview, setPreview] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Load dữ liệu user vào form
   useEffect(() => {
@@ -66,39 +67,26 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.fullName || !form.phone || (!user && !form.passwordHash)) {
+    if (!form.fullName || !form.phone || (isCreate && !form.passwordHash)) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc!");
       return;
     }
 
     try {
-      let payload = { ...form };
-
-      // Nếu có avatarFile, upload lên server (Cloudinary hoặc endpoint backend)
-      if (form.avatarFile) {
-        const fileData = new FormData();
-        fileData.append("file", form.avatarFile);
-        // Giả sử backend trả về url avatar
-        const resUpload = await adminApi.uploadAvatar(fileData);
-        payload.avatar = resUpload.data?.url || null;
-      }
-
-      let result;
+      let res;
       if (user) {
-        const res = await adminApi.updateCustomer(user.customerId, payload);
-        result = res?.data || res;
+        res = await adminApi.updateCustomer(user.customerId, form);
         toast.success("Cập nhật người dùng thành công!");
       } else {
-        const res = await adminApi.createCustomer(payload);
-        result = res?.data || res;
+        res = await adminApi.createCustomer(form);
         toast.success("Thêm người dùng thành công!");
       }
 
-      onSave(result);
+      onSave(res);
       onClose();
     } catch (error) {
-      console.error("Lỗi khi lưu người dùng:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Đã xảy ra lỗi khi lưu người dùng!");
+      console.error("Lỗi khi lưu người dùng:", error);
+      toast.error(error.message || "Đã xảy ra lỗi khi lưu người dùng!");
     }
   };
 
@@ -174,18 +162,34 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
                 disabled={isView}
               />
             </div>
-            {!user && !isView && (
+
+            {!isView && (
               <div>
-                <label className="text-sm text-gray-600">Mật khẩu *</label>
-                <input
-                  type="password"
-                  name="passwordHash"
-                  value={form.passwordHash}
-                  onChange={handleChange}
-                  className="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-orange-400 outline-none"
-                  placeholder="Nhập mật khẩu"
-                  required
-                />
+                <label className="text-sm text-gray-600">
+                  Mật khẩu {isCreate ? "*" : "(bỏ trống nếu không đổi)"}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="passwordHash"
+                    value={form.passwordHash}
+                    onChange={handleChange}
+                    className="border border-gray-300 p-2 rounded-lg w-full pr-10 focus:ring-2 focus:ring-orange-400 outline-none"
+                    placeholder={
+                      isCreate
+                        ? "Nhập mật khẩu"
+                        : "Nhập mật khẩu mới (nếu muốn đổi)"
+                    }
+                    required={isCreate}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <EyeIcon size={18} />}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -252,22 +256,74 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
           {/* Ảnh đại diện */}
           <div>
             <label className="text-sm text-gray-600">Ảnh đại diện</label>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex flex-col items-center gap-3 mt-2">
+              {preview ? (
+                <div className="flex flex-col items-center gap-2">
+                  <label htmlFor="fileUpload" className="cursor-pointer">
+                    <img
+                      src={preview}
+                      alt="avatar preview"
+                      className="w-32 h-32 object-cover rounded-lg border hover:opacity-80 transition"
+                    />
+                  </label>
+
+                  {!isView && (
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document.getElementById("fileUpload").click()
+                        }
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Thay ảnh
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, avatarFile: null }));
+                          setPreview(null);
+                        }}
+                        className="text-sm text-red-500 hover:underline"
+                      >
+                        Xóa ảnh
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                !isView && (
+                  <label
+                    htmlFor="fileUpload"
+                    className="flex items-center justify-center w-full p-4 border-2 border-dashed rounded-lg text-gray-500 cursor-pointer hover:bg-gray-50 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5 mr-2 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Chọn ảnh từ thiết bị
+                  </label>
+                )
+              )}
               <input
+                id="fileUpload"
                 type="file"
                 name="avatarFile"
                 accept="image/*"
                 onChange={handleChange}
-                className="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-orange-400 outline-none"
+                className="hidden"
                 disabled={isView}
               />
-              {preview && (
-                <img
-                  src={preview}
-                  alt="Avatar preview"
-                  className="w-16 h-16 object-cover rounded-full border shadow-sm"
-                />
-              )}
             </div>
           </div>
 

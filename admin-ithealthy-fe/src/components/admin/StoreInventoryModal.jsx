@@ -54,7 +54,11 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
   });
   const [searchText, setSearchText] = useState("");
   const [filterValue, setFilterValue] = useState(null);
-  const [modalProcessing, setModalProcessing] = useState(false); // overlay + spinner cho tất cả thao tác
+  const [modalProcessing, setModalProcessing] = useState(false);
+
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const fetchInventory = async () => {
     try {
@@ -101,7 +105,6 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
 
   const cancel = () => setEditingKey("");
 
-  // Save (Cập nhật)
   const save = async (key) => {
     try {
       const values = await form.validateFields();
@@ -133,7 +136,6 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
     }
   };
 
-  // Thêm mới
   const handleAdd = async () => {
     if (!newItem.IngredientId) return toast.error("Vui lòng chọn nguyên liệu!");
     if (!newItem.StockQuantity) return toast.error("Vui lòng nhập số lượng!");
@@ -161,7 +163,6 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
     }
   };
 
-  // Xóa
   const handleDelete = async (id) => {
     try {
       setModalProcessing(true);
@@ -187,6 +188,8 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
       item.ingredientName.toLowerCase().includes(searchText.toLowerCase()) &&
       (filterValue ? item.reorderLevel >= filterValue : true)
   );
+
+  const totalPages = Math.ceil(filteredInventory.length / pageSize);
 
   const columns = [
     {
@@ -313,7 +316,6 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
           position: "relative",
         }}
       >
-        {/* Overlay loading cho tất cả thao tác */}
         {modalProcessing && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50 rounded-xl">
             <Spin size="large" />
@@ -417,8 +419,17 @@ const StoreInventoryModal = ({ isOpen, setIsOpen, storeId, storeName }) => {
             components={{ body: { cell: EditableCell } }}
             className="shadow-lg rounded-xl transition-all duration-200"
             pagination={{
-              position: ["bottomCenter"],
-              pageSize: 8,
+              position: ['bottomCenter'],
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredInventory.length,
+              onChange: (page) => setCurrentPage(page),
+              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} bản ghi`,
+              itemRender: (_, type, originalElement) => {
+                if (type === 'prev') return <Button size="small" onClick={() => setCurrentPage(1)}>Đầu</Button>;
+                if (type === 'next') return <Button size="small" onClick={() => setCurrentPage(totalPages)}>Cuối</Button>;
+                return originalElement;
+              }
             }}
           />
         </Form>

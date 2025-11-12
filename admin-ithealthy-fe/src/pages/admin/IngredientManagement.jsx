@@ -30,9 +30,7 @@ const IngredientManagement = () => {
   const fetchIngredients = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/ingredient/all-ingredients"
-      );
+      const res = await axios.get("http://localhost:5000/api/ingredient");
       setIngredients(res.data || []);
     } catch (err) {
       console.error(err);
@@ -221,7 +219,7 @@ const IngredientManagement = () => {
                           className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
                           title="Sửa"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={18} />
                         </button>
                         <button
                           onClick={() => {
@@ -231,7 +229,7 @@ const IngredientManagement = () => {
                           className="p-2 rounded-lg hover:bg-red-50 text-red-600"
                           title="Xóa"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -306,33 +304,59 @@ const IngredientManagement = () => {
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Modern Pagination */}
       {!loading && filteredIngredients.length > 0 && (
-        <div className="flex items-center justify-between mt-6 text-sm flex-wrap gap-3">
-          <div className="text-gray-600">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
+          {/* Thông tin bản ghi */}
+          <div className="text-gray-600 font-medium">
             Hiển thị{" "}
-            <strong>
+            <span className="text-indigo-600 font-bold">
               {Math.min(filteredIngredients.length, page * PAGE_SIZE)}
-            </strong>{" "}
+            </span>{" "}
             / {filteredIngredients.length} bản ghi
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Nút phân trang */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Nút Đầu */}
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              « Đầu
+            </button>
+
+            {/* Nút Trước */}
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Trước
             </button>
-            <span className="px-2">
-              Trang <strong>{page}</strong> / {totalPages}
+
+            {/* Hiển thị Trang hiện tại */}
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
+              {page} / {totalPages}
             </span>
+
+            {/* Nút Sau */}
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Sau →
+            </button>
+
+            {/* Nút Cuối */}
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cuối »
             </button>
           </div>
         </div>

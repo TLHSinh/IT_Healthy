@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminHeader from "../components/admin/AdminHeader";
 import AdminSidebar from "../components/admin/AdminSidebar";
+import AdminHelpChat from "../components/common/AdminHelpChat"; // ✅ Chat trợ lý admin
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
       {/* ===== Sidebar ===== */}
       <AdminSidebar isOpen={isSidebarOpen} />
 
@@ -23,6 +23,9 @@ const AdminLayout = () => {
           <Outlet /> {/* ✅ Route con sẽ hiển thị ở đây */}
         </main>
       </div>
+
+      {/* ===== Chatbox trợ lý hướng dẫn ===== */}
+      <AdminHelpChat />  {/* ✅ Thêm dòng này */}
     </div>
   );
 };
