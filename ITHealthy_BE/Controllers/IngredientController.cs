@@ -98,7 +98,7 @@ namespace ITHealthy.Controllers
 
             return Ok(new
             {
-                message = "Cập nhật thông tin khách hàng thành công!",
+                message = "Cập nhật thông tin nguyên liệu thành công!",
                 data = ing
             });
         }
