@@ -13,7 +13,7 @@ public partial class ShippingDetail
 
     public string? CourierName { get; set; }
 
-    public DateOnly? ShipDate { get; set; }
+    public DateTime? ShipDate { get; set; }
 
     public string? ShipTime { get; set; }
 

@@ -455,6 +455,10 @@ public partial class ITHealthyDbContext : DbContext
             entity.Property(e => e.OrderDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.OrderNote).HasMaxLength(500);
+            entity.Property(e => e.OrderType)
+                .HasMaxLength(20)
+                .HasDefaultValue("Shipping");
             entity.Property(e => e.PromotionId).HasColumnName("PromotionID");
             entity.Property(e => e.StatusOrder)
                 .HasMaxLength(30)

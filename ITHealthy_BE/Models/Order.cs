@@ -27,6 +27,10 @@ public partial class Order
 
     public bool? InventoryDeducted { get; set; }
 
+    public string? OrderNote { get; set; }
+
+    public string OrderType { get; set; } = null!;
+
     public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 
     public virtual Customer? Customer { get; set; }
