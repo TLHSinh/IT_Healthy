@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { AuthContext } from "../context/AuthContext";
@@ -12,23 +12,9 @@ import {
 
 const Navbar = ({ onSubmenuToggle }) => {
   const [activeMenu, setActiveMenu] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
-  const isHomePage = location.pathname === "/";
-
-  // Detect scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isHomePage) {
-        setIsScrolled(window.scrollY > 50);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [isHomePage]);
 
   const handleLogout = () => {
     logout();
@@ -49,15 +35,7 @@ const Navbar = ({ onSubmenuToggle }) => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <div 
-      className={`navbar-wrapper ${
-        isHomePage 
-          ? isScrolled 
-            ? "navbar-scrolled" 
-            : "navbar-transparent"
-          : ""
-      }`}
-    >
+    <div className="navbar-wrapper">
       <div className="navbar-container">
         <div className="navbar-main">
           {/* Logo */}
@@ -70,9 +48,23 @@ const Navbar = ({ onSubmenuToggle }) => {
               setActiveMenu(null);
             }}
           >
-            
-              <img src="/img/logo.png" className="logo-ithealthy" />
-            
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="175"
+              height="28"
+              viewBox="0 0 175 28"
+              fill="none"
+            >
+              <text
+                x="10"
+                y="20"
+                fill="#00B389"
+                fontSize="20"
+                fontWeight="bold"
+              >
+                IT_Healthy
+              </text>
+            </svg>
           </a>
 
           {/* Main Navigation */}
@@ -177,10 +169,7 @@ const Navbar = ({ onSubmenuToggle }) => {
               onClick={() => navigate("/carts")}
               title="Giỏ hàng"
             >
-              <ShoppingCart 
-                size={24} 
-                color={isHomePage && !isScrolled ? "#ffffff" : "#00B389"} 
-              />
+              <ShoppingCart size={24} color="#00B389" />
             </button>
 
             {/* Đăng nhập / Đăng xuất */}
@@ -190,10 +179,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                 onClick={handleLogout}
                 title="Đăng xuất"
               >
-                <LogOut 
-                  size={22} 
-                  color={isHomePage && !isScrolled ? "#ffffff" : "#00B389"} 
-                />
+                <LogOut size={22} color="#00B389" />
               </button>
             ) : (
               <button
@@ -201,10 +187,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                 onClick={() => navigate("/login-user")}
                 title="Đăng nhập"
               >
-                <CircleUserRound 
-                  size={28} 
-                  color={isHomePage && !isScrolled ? "#ffffff" : "#00B389"} 
-                />
+                <CircleUserRound size={28} color="#00B389" />
               </button>
             )}
           </div>

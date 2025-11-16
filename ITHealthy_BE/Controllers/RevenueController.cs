@@ -39,7 +39,7 @@ namespace ITHealthy.Controllers
                 query = query.Where(o => o.OrderDate <= toDate.Value);
 
             // Chỉ lấy đơn hoàn thành
-            query = query.Where(o => o.StatusOrder == "Paid" && o.OrderDate.HasValue);
+            query = query.Where(o => o.StatusOrder == "Completed" && o.OrderDate.HasValue);
 
             // Group theo Store + Year + Month (+ Day nếu byDay = true)
             var revenueReport = await query

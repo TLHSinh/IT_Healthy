@@ -90,6 +90,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   // Discount & Notes
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherCode, setVoucherCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [orderNotes, setOrderNotes] = useState("");
@@ -156,37 +157,36 @@ export default function CheckoutPage() {
   const tax = subtotal * 0.08; // VAT 8%
   const total = subtotal + shippingCost + tax - discount;
 
-  // ============= APPLY VOUCHER =============
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) {
       toast.error("Vui lòng nhập mã giảm giá");
       return;
     }
 
+    // Reset trước mỗi lần apply
+    setDiscount(0);
+    setAppliedVoucher(null);
+
     try {
-      // Call API kiểm tra voucher
       const res = await axios.post(
         "http://localhost:5000/api/vouchers/validate",
         {
           code: voucherCode,
           customerId: user.customerId,
           orderTotal: subtotal,
+          shippingFee: SHIPPING_OPTIONS[shippingMethod]?.price || 0,
         }
       );
 
       if (res.data.valid) {
         setDiscount(res.data.discountAmount);
-        toast.success(
-          `Áp dụng mã thành công! Giảm ${res.data.discountAmount.toLocaleString(
-            "vi-VN"
-          )}₫`
-        );
+        setAppliedVoucher(res.data.voucherId);
+        toast.success(`Áp dụng thành công!`);
       } else {
-        toast.error(res.data.message || "Mã giảm giá không hợp lệ");
+        toast.error(res.data.message);
       }
     } catch (err) {
-      toast.error("Mã giảm giá không hợp lệ hoặc đã hết hạn");
-      console.error(err);
+      toast.error("Có lỗi khi áp dụng mã.");
     }
   };
 
@@ -220,13 +220,13 @@ export default function CheckoutPage() {
     const requestPayload = {
       CustomerId: user.customerId,
       StoreId: orderType === "Pickup" ? selectedStore?.storeId : 1,
-      VoucherId: voucherCode || null,
+      VoucherId: appliedVoucher,
       PromotionId: null,
       Discount: discount,
-      OrderType: orderType, // <<-- NEW
-      OrderNote: orderNotes || "", // <<-- NEW (đúng với API)
+      OrderType: orderType,
+      OrderNote: orderNotes || "",
       ShippingAddressId:
-        orderType === "Shipping" ? selectedAddress.addressId : null, // <<-- NEW
+        orderType === "Shipping" ? selectedAddress.addressId : null,
 
       CourierName:
         orderType === "Shipping"
@@ -253,6 +253,24 @@ export default function CheckoutPage() {
         "http://localhost:5000/api/checkout",
         requestPayload
       );
+
+      // Nếu có voucher đã áp dụng → gọi API redeem
+      if (appliedVoucher) {
+        try {
+          await axios.post("http://localhost:5000/api/vouchers/redeem", {
+            VoucherId: appliedVoucher,
+            CustomerId: user.customerId,
+            OrderId: res.data.orderId,
+            Amount: discount,
+          });
+          console.log("Voucher đã được redeem thành công");
+        } catch (redeemErr) {
+          console.error("Redeem voucher thất bại:", redeemErr);
+          toast.error(
+            "Không thể áp dụng voucher vào đơn hàng. Liên hệ support!"
+          );
+        }
+      }
 
       // Clear cart from localStorage
       localStorage.removeItem("checkout_cart");
@@ -568,16 +586,43 @@ export default function CheckoutPage() {
                     onChange={(e) =>
                       setVoucherCode(e.target.value.toUpperCase())
                     }
+                    disabled={discount > 0}
                     placeholder="Nhập mã"
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                   <button
                     onClick={handleApplyVoucher}
+                    disabled={discount > 0}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium"
                   >
                     Áp dụng
                   </button>
                 </div>
+
+                {appliedVoucher && discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>
+                      {voucherCode === "FREESHIP"
+                        ? "Miễn phí vận chuyển"
+                        : "Giảm giá"}
+                    </span>
+                    <span>-{discount.toLocaleString("vi-VN")}₫</span>
+                  </div>
+                )}
+
+                {discount > 0 && (
+                  <button
+                    className="text-red-600 text-sm mt-2"
+                    onClick={() => {
+                      setVoucherCode("");
+                      setDiscount(0);
+                      setAppliedVoucher(null);
+                    }}
+                  >
+                    Xóa mã
+                  </button>
+                )}
+
                 {discount > 0 && (
                   <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                     ✓ Giảm giá: -{discount.toLocaleString("vi-VN")}₫
@@ -669,6 +714,16 @@ export default function CheckoutPage() {
                   <ShieldCheck size={16} className="text-green-600" />
                   Thanh toán an toàn & bảo mật
                 </div>
+
+                <AddressModal
+                  user={user}
+                  addresses={addresses}
+                  setAddresses={setAddresses}
+                  selectedAddress={selectedAddress}
+                  setSelectedAddress={setSelectedAddress}
+                  isOpen={isAddressModalOpen}
+                  onClose={() => setIsAddressModalOpen(false)}
+                />
               </div>
             </div>
           </div>

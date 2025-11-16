@@ -40,7 +40,7 @@ namespace ITHealthy.Controllers
                     TotalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity),
                     DiscountApplied = request.Discount ?? 0,
                     FinalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity) - (request.Discount ?? 0),
-                    StatusOrder = "Paid",
+                    StatusOrder = "Pending",
                     InventoryDeducted = false,
                     OrderNote = request.OrderNote,           // lưu ghi chú
                     OrderType = request.OrderType           // lưu loại đơn hàng
