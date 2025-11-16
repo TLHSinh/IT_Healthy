@@ -78,6 +78,8 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [stores, setStores] = useState([]);
+  const [selectedStore, setSelectedStore] = useState(null);
 
   // Shipping & Payment
   const [shippingMethod, setShippingMethod] = useState(
@@ -128,6 +130,25 @@ export default function CheckoutPage() {
       navigate("/cart");
     }
   }, [cart, navigate]);
+
+  // ============= LOAD STORE =============
+
+  useEffect(() => {
+    if (shippingMethod !== "pickup") return;
+
+    const fetchStores = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/stores");
+        setStores(res.data || []);
+        setSelectedStore(res.data[0]); // auto chọn cửa hàng đầu tiên
+      } catch (err) {
+        console.error(err);
+        toast.error("Không thể tải danh sách cửa hàng");
+      }
+    };
+
+    fetchStores();
+  }, [shippingMethod]);
 
   // ============= CALCULATIONS =============
   const subtotal = cart?.totalPrice || 0;
@@ -198,7 +219,7 @@ export default function CheckoutPage() {
 
     const requestPayload = {
       CustomerId: user.customerId,
-      StoreId: 1,
+      StoreId: orderType === "Pickup" ? selectedStore?.storeId : 1,
       VoucherId: voucherCode || null,
       PromotionId: null,
       Discount: discount,
@@ -308,13 +329,40 @@ export default function CheckoutPage() {
               </div>
 
               {shippingMethod === "pickup" ? (
-                <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center">
-                  <p className="font-semibold text-gray-900">
-                    Nhận tại cửa hàng
+                <div className="bg-green-50 border border-green-300 rounded-xl p-4">
+                  <p className="font-semibold text-gray-900 mb-2">
+                    Chọn cửa hàng
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Bạn sẽ đến cửa hàng để nhận món.
-                  </p>
+
+                  <select
+                    className="w-full border border-gray-300 p-2 rounded-lg"
+                    value={selectedStore?.storeId || ""}
+                    onChange={(e) => {
+                      const store = stores.find(
+                        (s) => s.storeId === parseInt(e.target.value)
+                      );
+                      setSelectedStore(store);
+                    }}
+                  >
+                    {stores.map((store) => (
+                      <option key={store.storeId} value={store.storeId}>
+                        {store.storeName} - {store.district}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedStore && (
+                    <div className="mt-3 text-sm text-gray-700">
+                      <p>
+                        <strong>Địa chỉ:</strong> {selectedStore.streetAddress},{" "}
+                        {selectedStore.ward}, {selectedStore.district},{" "}
+                        {selectedStore.city}
+                      </p>
+                      <p>
+                        <strong>SĐT:</strong> {selectedStore.phone}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : selectedAddress ? (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -626,17 +674,6 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-
-      {/* ADDRESS MODAL */}
-      <AddressModal
-        user={user}
-        addresses={addresses}
-        setAddresses={setAddresses}
-        selectedAddress={selectedAddress}
-        setSelectedAddress={setSelectedAddress}
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-      />
     </div>
   );
 }

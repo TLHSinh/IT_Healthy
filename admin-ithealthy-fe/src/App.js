@@ -15,7 +15,7 @@ import CategoryIngManagement from "./pages/admin/CategoryIngManagement";
 //import StoreInventoryManagement from "./pages/admin/StoreInventoryManagement";
 import IngredientManagement from "./pages/admin/IngredientManagement";
 
-
+import RevenueDashboard from "./pages/admin/RevenueDashboard";
 
 
 import AdminLayout from "./layouts/AdminLayout";
@@ -59,6 +59,8 @@ function App() {
 
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
          
+
+          <Route path="/admin/revenue" element={<RevenueDashboard />} />
 
         </Route>
       </Routes>

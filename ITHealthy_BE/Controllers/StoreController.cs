@@ -1,4 +1,5 @@
 using ITHealthy.Data;
+using ITHealthy.DTOs;
 using ITHealthy.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,28 @@ namespace ITHealthy.Controllers
 
         // ✅ Lấy tất cả cửa hàng
         [HttpGet]
-        public async Task<IActionResult> GetAllStores()
+        public async Task<ActionResult<IEnumerable<StoreDTO>>> GetAllStores()
         {
-            var stores = await _context.Stores.ToListAsync();
+            var stores = await _context.Stores
+            .Select(s => new StoreDTO
+            {
+                StoreId = s.StoreId,
+                StoreName = s.StoreName,
+                Phone = s.Phone,
+                StreetAddress = s.StreetAddress,
+                Ward = s.Ward,
+                District = s.District,
+                City = s.City,
+                Country = s.Country,
+                Postcode = s.Postcode,
+                Latitude = s.Latitude,
+                Longitude = s.Longitude,
+                GooglePlaceId = s.GooglePlaceId,
+                Rating = s.Rating,
+                DateJoined = s.DateJoined,
+                IsActive = s.IsActive
+            })
+            .ToListAsync();
             return Ok(stores);
         }
 
@@ -42,7 +62,7 @@ namespace ITHealthy.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            
+
             model.IsActive = true;
             _context.Stores.Add(model);
             await _context.SaveChangesAsync();
@@ -92,6 +112,6 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Đã xóa cửa hàng thành công!" });
         }
 
-        
+
     }
 }
