@@ -16,6 +16,8 @@ import CategoryIngManagement from "./pages/admin/CategoryIngManagement";
 import IngredientManagement from "./pages/admin/IngredientManagement";
 
 import RevenueDashboard from "./pages/admin/RevenueDashboard";
+import VouchersManagement from "./pages/admin/VouchersManagement";
+import PromotionsManagement from "./pages/admin/PromotionsManagement";
 
 
 import AdminLayout from "./layouts/AdminLayout";
@@ -55,7 +57,8 @@ function App() {
           {/* <Route path="/admin/store-inventory/:storeId" element={<StoreInventoryManagement />} /> */}
 
 
-
+          <Route path="/admin/vouchers" element={<VouchersManagement />} />
+          <Route path="/admin/promotions" element={<PromotionsManagement />} />
 
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
          

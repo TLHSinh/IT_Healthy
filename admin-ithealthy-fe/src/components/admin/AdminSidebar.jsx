@@ -10,6 +10,8 @@ import {
   Package,
   Boxes,
   Coins,
+  Ticket,
+  Gift,
 } from "lucide-react";
 import HELogo from "../../assets/HE.png";
 
@@ -152,6 +154,36 @@ const AdminSidebar = ({ isOpen }) => {
         >
           <Coins size={20} />
           {isOpen && <span>Quản lý Doanh Thu</span>}
+        </NavLink>
+
+        {/* Vouchers */}
+        <NavLink
+          to="/admin/vouchers"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              isActive
+                ? "bg-orange-100 text-orange-600 font-semibold"
+                : "text-gray-700 hover:bg-orange-50"
+            }`
+          }
+        >
+          <Ticket size={20} />
+          {isOpen && <span>Quản lý Voucher</span>}
+        </NavLink>
+
+        {/* Promotions */}
+        <NavLink
+          to="/admin/promotions"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              isActive
+                ? "bg-orange-100 text-orange-600 font-semibold"
+                : "text-gray-700 hover:bg-orange-50"
+            }`
+          }
+        >
+          <Gift size={20} />
+          {isOpen && <span>Quản lý PROMOTIONS</span>}
         </NavLink>
 
         {/* Sản phẩm */}

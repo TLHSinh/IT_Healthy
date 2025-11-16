@@ -1,0 +1,72 @@
+.image-card-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(16px, 2vw, 32px);
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+  padding: 20px 0;
+  box-sizing: border-box;
+}
+
+/* Ảnh hình chữ nhật có bo góc */
+.image-card {
+  position: relative;
+  width: 305px;
+  height: 458px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.image-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* Hình ảnh fill đầy */
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Overlay: lớp mờ chứa chữ */
+.card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 15px 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+  color: white;
+  text-align: left;
+}
+
+.card-overlay h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.card-overlay p {
+  font-size: 40px;
+  opacity: 0.9;
+}
+
+/* Responsive: 2 ảnh 1 hàng cho tablet */
+@media (max-width: 900px) {
+  .image-card-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile: 1 ảnh 1 hàng */
+@media (max-width: 500px) {
+  .image-card-gallery {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

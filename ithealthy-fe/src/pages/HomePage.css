@@ -1,0 +1,263 @@
+.main {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #F5EDD8;
+}
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 100vh; /* ✅ Chiếm full màn hình */
+  background-image: linear-gradient(rgba(12,3,51,0.3), rgba(12,3,51,0.3));
+  display: flex;
+/* ✅ Sắp xếp con theo chiều dọc */
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Ẩn phần video tràn */
+}
+
+.back-vid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* ✅ Video luôn phủ đủ */
+  z-index: 0;
+}
+
+.content1-homepage {
+  text-align: center;
+  z-index: 1;
+  position: relative;
+}
+
+.homepage-title {
+  color: white;
+  font-size: 130px;
+  font-weight: 600;
+}
+
+.content1-homepage a {
+  display: inline-block;
+  padding: 12px 30px;
+  background-color: rgba(167, 151, 8, 0.356);
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.content1-homepage a:hover {
+  background-color: rgba(167, 151, 8, 0.844);
+}
+
+/* ✅ Content 2 sẽ nằm bên dưới video */
+.container-content2-hp {
+  position: relative;
+  background-color: #4C082A;
+  color: #F5EDD8;
+  padding: 120px 20px;
+  text-align: center;
+  overflow: hidden; /* Quan trọng để SVG không tràn */
+  margin-bottom: 30px;
+}
+
+/* Content giữa */
+.content2-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  z-index: 2;
+  position: relative;
+  
+}
+
+.content2-inner h1 {
+  font-size: 60px;
+  color: #F5EDD8;
+  margin-bottom: 20px;
+  font-weight: bolder;
+}
+
+.content2-inner p {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* SVG trái & phải */
+.svg-left,
+.svg-right {
+  position: absolute;
+  width: 120px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.svg-left {
+  left: 10%;
+}
+
+.svg-right {
+  right: 10%;
+}
+
+/* Có thể tùy chỉnh từng SVG một */
+.svg-1 {
+  top: 30%;
+  width: 10%;
+}
+
+.svg-2 {
+  top: 70%;
+  width: 10%;
+}
+
+.svg-3 {
+  top: 40%;
+  width: 10%;
+}
+
+.svg-4 {
+  top: 80%;
+  width: 10%;
+}
+
+
+.container-content3-hp {
+  position: relative;
+  padding: 20px 0;
+  text-align: center;
+  margin: 0 100px;
+}
+.content3-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  z-index: 2;
+  position: relative; 
+}
+.content3-inner h1 {
+  font-size: 60px;
+  color: #4C082A;
+  margin-bottom: 20px;
+  font-weight: bolder;
+}
+.content3-inner p {
+  font-size: 16px;
+  line-height: 1.7;
+  font-family: sans-serif;
+  font-weight: 500;
+}
+
+.gallery-button-container {
+  margin-top: 50px;
+  text-align: center;
+}
+
+/* Nút điều hướng */
+.go-calories-btn {
+  background-color: #00b389;
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  padding: 14px 36px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 16px rgba(0, 179, 137, 0.3);
+}
+
+.go-calories-btn:hover {
+  background-color: #009b77;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 179, 137, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .go-calories-btn {
+    width: 80%;
+    font-size: 1rem;
+  }
+}
+
+.container-content4-hp {
+  position: relative;
+  padding: 20px 0;
+  text-align: center;
+margin: 70px 100px;
+}
+
+
+.food-carousel {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .food-carousel {
+    gap: 20px;
+  }
+}
+
+.container-content5-hp {
+  position: relative;
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+.container-content6-hp {
+  position: relative;
+  padding: 20px 0;
+  text-align: center;
+margin: 70px 100px;
+}
+.content6-inner {
+  max-width: 90%;
+  margin: 0 auto;
+  z-index: 2;
+  position: relative; 
+}
+.content6-inner h1 {
+  font-size: 60px;
+  color: #4C082A;
+  margin-bottom: 20px;
+  font-weight: bolder;
+}
+.content6-inner h2 {
+  font-size: 15px;
+  color: #4C082A;
+  font-weight: bolder;
+}
+.content6-inner p {
+  font-size: 16px;
+  line-height: 1.7;
+  font-family: sans-serif;
+  font-weight: 500;
+  text-align: center;
+  padding: 0 200px;
+}
+
+.image-container6-hp{
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+.content6-inner img {
+  margin-top: 30px;
+  border-radius: 20px;
+}
+.logo-befood{
+  height: 30px;
+  width: 200px;
+}
+.logo-delivery{
+  height: 60px;
+}

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { PlusCircle, EyeIcon, Edit3, Trash2, User, Edit2 } from "lucide-react";
+import { PlusCircle, EyeIcon, Trash2, User, Edit2 } from "lucide-react";
 import StaffModal from "../../components/admin/StaffModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
