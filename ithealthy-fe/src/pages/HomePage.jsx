@@ -21,7 +21,7 @@ export default function HomePage() {
   const isInView = useInView(sectionRef, { margin: "-100px" });
 
   return (
-    <div className="main">
+    <div className="main-hp">
       <div className="flex justify-center items-center h-screen bg-gray-50 relative">
         {/* <h1 className="text-3xl font-bold text-gray-700">TRANG CHỦ</h1> */}
         <div className="video-container">
