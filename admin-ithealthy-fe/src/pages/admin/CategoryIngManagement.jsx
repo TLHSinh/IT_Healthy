@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PlusCircle, Edit2, Trash2, RefreshCcw, Folder } from "lucide-react";
+import { PlusCircle, Edit2, Trash2, RefreshCcw, Folders,Search } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 import axios from "axios";
 import CategoryModal from "../../components/admin/CategoryModal";
@@ -75,48 +75,55 @@ const CategoryIngManagement = () => {
   const currentPageData = filteredCategories.slice(startIndex, endIndex);
 
   return (
-    <div>
+    <div className="p-6">
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Header */}
+      {/* --- Header --- */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-          <Folder className="text-indigo-600" />
+        {/* Tiêu đề */}
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+          <Folders className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
           Danh mục Nguyên liệu
         </h2>
 
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* Ô tìm kiếm + Buttons */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Ô tìm kiếm */}
+          <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên danh mục..."
+              className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+            <div className="px-3 text-gray-400 border-l border-gray-200">
+              <Search size={20} />
+            </div>
+          </div>
+
+          {/* Nút làm mới */}
           <button
             onClick={fetchCategories}
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
           >
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw className="w-4 h-4" /> Làm mới
           </button>
 
+          {/* Nút thêm danh mục */}
           <button
             onClick={() => {
               setSelected(null);
               setOpenModal(true);
             }}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium rounded-xl shadow-lg hover:from-indigo-700 hover:to-indigo-600 transition"
           >
-            <PlusCircle size={18} /> Thêm danh mục
+            <PlusCircle className="w-5 h-5" /> Thêm danh mục
           </button>
         </div>
-      </div>
-
-      {/* Ô tìm kiếm */}
-      <div className="flex items-center gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="Tìm kiếm theo tên danh mục..."
-          className="border rounded-lg px-3 py-2 flex-1 min-w-[200px]"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
       </div>
 
       {/* Bảng danh mục */}

@@ -55,6 +55,76 @@ namespace ITHealthy.Controllers
                 Categories = promo.PromotionCategories?.Select(pc => pc.Category.CategoryName)
             });
         }
+[HttpPut("{id}")]
+public async Task<IActionResult> Update(int id, PromotionCreateRequest request)
+{
+    var promo = await _context.Promotions
+        .Include(p => p.PromotionStores)
+        .Include(p => p.PromotionProducts)
+        .Include(p => p.PromotionCategories)
+        .FirstOrDefaultAsync(p => p.PromotionId == id);
+
+    if (promo == null)
+        return NotFound();
+
+    // Update fields
+    promo.PromotionName = request.PromotionName;
+    promo.DescriptionPromotion = request.DescriptionPromotion;
+    promo.StartDate = request.StartDate;
+    promo.EndDate = request.EndDate;
+    promo.DiscountType = request.DiscountType;
+    promo.DiscountValue = request.DiscountValue;
+    promo.MinOrderAmount = request.MinOrderAmount;
+
+    // Remove old relations
+    _context.PromotionStores.RemoveRange(promo.PromotionStores);
+    _context.PromotionProducts.RemoveRange(promo.PromotionProducts);
+    _context.PromotionCategories.RemoveRange(promo.PromotionCategories);
+
+    // Add new Store relations
+    if (request.StoreIDs != null)
+    {
+        foreach (var idStore in request.StoreIDs)
+        {
+            _context.PromotionStores.Add(new PromotionStore
+            {
+                PromotionId = promo.PromotionId,
+                StoreId = idStore
+            });
+        }
+    }
+
+    // Add new Product relations
+    if (request.ProductIDs != null)
+    {
+        foreach (var idProduct in request.ProductIDs)
+        {
+            _context.PromotionProducts.Add(new PromotionProduct
+            {
+                PromotionId = promo.PromotionId,
+                ProductId = idProduct
+            });
+        }
+    }
+
+    // Add new Category relations
+    if (request.CategoryIDs != null)
+    {
+        foreach (var idCategory in request.CategoryIDs)
+        {
+            _context.PromotionCategories.Add(new PromotionCategory
+            {
+                PromotionId = promo.PromotionId,
+                CategoryId = idCategory
+            });
+        }
+    }
+
+    await _context.SaveChangesAsync();
+    return Ok(new { message = "Updated successfully" });
+}
+
+        
 
       
         [HttpPost]

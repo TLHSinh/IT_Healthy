@@ -153,6 +153,7 @@ namespace ITHealthy.Controllers
                     i.ProductId,
                     ProductName = i.Product != null ? i.Product.ProductName : null,
                     ImageProduct = i.Product != null ? i.Product.ImageProduct : null,
+                    DescriptionProduct = i.Product != null ? i.Product.DescriptionProduct : null,
                     i.ComboId,
                     ComboName = i.Combo != null ? i.Combo.ComboName : null,
                     i.BowlId,

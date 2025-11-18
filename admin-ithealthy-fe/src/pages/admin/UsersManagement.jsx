@@ -3,8 +3,7 @@ import React, { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminApi";
 import UsersModal from "../../components/admin/UsersModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog"; // ✅ import ConfirmDialog
-import { AiOutlinePlus } from "react-icons/ai";
-import { Search, User, Eye, Edit2, Trash2 } from "lucide-react";
+import { Search, User, Eye, Edit2, Trash2, PlusCircle } from "lucide-react";
 import { toast } from "react-toastify";
 
 const PAGE_SIZE = 5;
@@ -115,53 +114,57 @@ const UsersManagement = () => {
   );
 
   return (
-    <div>
+    <div className="p-6">
       {/* --- Header --- */}
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-indigo-700 flex items-center gap-3">
-          <User className="text-indigo-600" /> Quản lý Người dùng
-        </h2>
+<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 md:gap-0">
+  {/* Tiêu đề */}
+  <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+    <User className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
+    Quản lý Người dùng
+  </h2>
 
-        <div className="flex items-center gap-3">
-          {/* Ô tìm kiếm */}
-          <div className="flex items-center border border-gray-300 rounded-xl shadow-sm bg-white overflow-hidden focus-within:ring-2 focus-within:ring-indigo-200 transition">
-            <input
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 w-64 outline-none text-sm"
-              placeholder="Tìm theo tên, email, SĐT..."
-            />
-            <div className="px-3 text-gray-500 border-l bg-gray-50">
-              <Search size={18} />
-            </div>
-          </div>
-
-          {/* Lọc trạng thái */}
-          <select
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              setPage(1);
-            }}
-            className="p-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-indigo-400 transition"
-          >
-            <option value="">Tất cả</option>
-            <option value="active">Kích hoạt</option>
-            <option value="inactive">Khóa</option>
-          </select>
-
-          {/* Nút thêm */}
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
-          >
-            <AiOutlinePlus /> Thêm người dùng
-          </button>
-        </div>
+  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-3 w-full sm:w-auto">
+    {/* Ô tìm kiếm */}
+    <div className="flex items-center w-full sm:w-72 bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+      <input
+        value={searchTerm}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
+          setPage(1);
+        }}
+        className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+        placeholder="Tìm theo tên, email, SĐT..."
+      />
+      <div className="px-3 text-gray-400 border-l border-gray-200">
+        <Search size={20} />
       </div>
+    </div>
+
+    {/* Lọc trạng thái */}
+    <select
+      value={filterStatus}
+      onChange={(e) => {
+        setFilterStatus(e.target.value);
+        setPage(1);
+      }}
+      className="w-full sm:w-auto p-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+    >
+      <option value="">Tất cả</option>
+      <option value="active">Kích hoạt</option>
+      <option value="inactive">Khóa</option>
+    </select>
+
+    {/* Nút thêm */}
+    <button
+      onClick={handleAdd}
+      className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium rounded-xl shadow-lg hover:from-indigo-700 hover:to-indigo-600 transition w-full sm:w-auto"
+    >
+      <PlusCircle className="w-5 h-5" />
+      Thêm người dùng
+    </button>
+  </div>
+</div>
+
 
       {/* --- Danh sách người dùng --- */}
       <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">

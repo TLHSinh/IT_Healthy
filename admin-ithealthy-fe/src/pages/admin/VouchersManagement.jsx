@@ -1,8 +1,8 @@
-// pages/admin/VouchersManagement.jsx
-import React, { useEffect, useState, useMemo } from "react";
+// src/pages/admin/VouchersManagement.jsx
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Toaster, toast } from "react-hot-toast";
-import { PlusCircle, Edit2, Trash2, RefreshCcw, Ticket } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { PlusCircle, Trash2, Edit2, RefreshCcw, TicketPercent, Search } from "lucide-react";
 import VouchersModal from "../../components/admin/VouchersModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
@@ -10,267 +10,313 @@ const PAGE_SIZE = 8;
 
 const VouchersManagement = () => {
   const [vouchers, setVouchers] = useState([]);
-  const [stores, setStores] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVoucher, setModalVoucher] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toDelete, setToDelete] = useState(null);
 
-  // 🔹 Lấy dữ liệu dropdown (cửa hàng, sản phẩm, danh mục)
-  const fetchOptions = async () => {
-    try {
-      const [storesRes, productsRes, categoriesRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/stores"),
-        axios.get("http://localhost:5000/api/products/all-products"),
-        axios.get("http://localhost:5000/api/category/category_pro")
-      ]);
+  // Dữ liệu phụ
+  const [stores, setStores] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-      setStores(storesRes.data || []);
-      setProducts(productsRes.data || []);
-      setCategories(categoriesRes.data || []);
-    } catch (err) {
-      console.error(err);
-      toast.error("Lấy dữ liệu dropdown thất bại");
-    }
-  };
+  // Filter
+  const [storeFilter, setStoreFilter] = useState("");
+  const [productFilter, setProductFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  // Pagination
+  const [page, setPage] = useState(1);
 
-  // 🔹 Lấy danh sách voucher
-  const fetchVouchers = async () => {
+  const API_BASE = "http://localhost:5000/api";
+
+  // 🔹 Fetch dữ liệu
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/vouchers");
-      setVouchers(res.data || []);
+      const [s, p, c, v] = await Promise.all([
+        axios.get(`${API_BASE}/Stores`),
+        axios.get(`${API_BASE}/Products/all-products`),
+        axios.get(`${API_BASE}/Category/category_pro`),
+        axios.get(`${API_BASE}/vouchers`)
+      ]);
+      setStores(s.data);
+      setProducts(p.data);
+      setCategories(c.data);
+
+      const detailedVouchers = await Promise.all(
+        v.data.map(async (voucher) => {
+          const detail = await axios.get(`${API_BASE}/vouchers/${voucher.voucherId}`);
+          return detail.data;
+        })
+      );
+      setVouchers(detailedVouchers);
     } catch (err) {
+      toast.error("Lỗi tải dữ liệu!");
       console.error(err);
-      toast.error("Lấy danh sách voucher thất bại");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Xóa voucher
-  const handleDelete = async () => {
-    if (!toDelete) return;
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // 🔹 Add / Edit
+  const openModal = (voucher = null) => {
+    setEditData(voucher);
+    setModalOpen(true);
+  };
+
+  const refreshVoucher = async (updated) => {
     try {
-      await axios.delete(`http://localhost:5000/api/vouchers/${toDelete.voucherId}`);
-      toast.success("Xóa voucher thành công");
-      fetchVouchers();
+      const res = await axios.get(`${API_BASE}/vouchers/${updated.voucherId}`);
+      setVouchers((prev) => {
+        const exists = prev.find((v) => v.voucherId === res.data.voucherId);
+        return exists
+          ? prev.map((v) => (v.voucherId === res.data.voucherId ? res.data : v))
+          : [...prev, res.data];
+      });
     } catch (err) {
       console.error(err);
-      toast.error("Xóa voucher thất bại");
+    }
+  };
+
+  // 🔹 Delete
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/vouchers/${id}`);
+      toast.success("Xóa voucher thành công!");
+      setVouchers((prev) => prev.filter((v) => v.voucherId !== id));
+    } catch (err) {
+      toast.error("Xóa voucher thất bại!");
+      console.error(err);
     } finally {
       setConfirmOpen(false);
       setToDelete(null);
     }
   };
 
-  useEffect(() => {
-    fetchOptions();
-    fetchVouchers();
-  }, []);
+  // 🔹 Filtered vouchers
+  const filteredVouchers = vouchers.filter((v) => {
+    const storeMatch = storeFilter
+      ? v.stores?.some((s) => s.storeName.toLowerCase().includes(storeFilter.toLowerCase()))
+      : true;
+    const productMatch = productFilter
+      ? v.products?.some((p) => p.productName.toLowerCase().includes(productFilter.toLowerCase()))
+      : true;
+    const categoryMatch = categoryFilter
+      ? v.categories?.some((c) => c.categoryName.toLowerCase().includes(categoryFilter.toLowerCase()))
+      : true;
+    return storeMatch && productMatch && categoryMatch;
+  });
 
-  // 🔹 Map IDs sang tên hiển thị
-  const getNamesByIds = (ids, list, key = "name") => {
-    if (!ids || ids.length === 0) return "-";
-    return ids
-      .map(id => {
-        const item = list.find(i => i[`${key}Id`] === id);
-        return item ? item[`${key}Name`] : id;
-      })
-      .join(", ");
-  };
-
-  // 🔍 Lọc theo code hoặc mô tả
-  const filteredVouchers = useMemo(() => {
-    return vouchers.filter(v =>
-      v.code?.toLowerCase().includes(search.toLowerCase()) ||
-      v.descriptionVou?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [vouchers, search]);
-
-  // 🔹 Phân trang
   const totalPages = Math.ceil(filteredVouchers.length / PAGE_SIZE);
-  const startIndex = (page - 1) * PAGE_SIZE;
-  const endIndex = startIndex + PAGE_SIZE;
-  const currentPageData = filteredVouchers.slice(startIndex, endIndex);
+  const currentData = filteredVouchers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [storeFilter, productFilter, categoryFilter]);
 
   return (
-    <div>
-      <Toaster position="top-right" />
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-          <Ticket className="text-indigo-600" /> Quản lý Voucher
+    <div className="p-6">
+      {/* --- Header --- */}
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
+        {/* Tiêu đề */}
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+          <TicketPercent className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
+          Quản lý Vouchers
         </h2>
 
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo code hoặc mô tả..."
-            className="border rounded-lg px-3 py-2 flex-1 min-w-[200px]"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        {/* Search & Buttons */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Ô tìm kiếm */}
+          <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+            <input
+              type="text"
+              placeholder="Tìm kiếm voucher..."
+              className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="px-3 text-gray-400 border-l border-gray-200">
+              <Search size={20} />
+            </div>
+          </div>
+
+          {/* Nút làm mới */}
           <button
-            onClick={fetchVouchers}
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+            onClick={fetchData}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
           >
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw className="w-4 h-4" /> Làm mới
           </button>
 
+          {/* Nút thêm mới */}
           <button
-            onClick={() => { setModalVoucher(null); setShowModal(true); }}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
+            onClick={() => openModal()}
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white font-medium rounded-xl shadow-lg hover:from-purple-700 hover:to-purple-600 transition"
           >
-            <PlusCircle size={18} /> Tạo Voucher
+            <PlusCircle className="w-5 h-5" /> Thêm mới
           </button>
         </div>
       </div>
 
-      {/* Bảng voucher */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-        <table className="min-w-full text-sm">
-          <thead className="bg-indigo-50 text-indigo-700 text-left">
+
+      {/* Table
+      <div className="overflow-auto border rounded-2xl shadow-lg relative">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
+          </div>
+        )}
+
+        <table className="min-w-full border-collapse border border-gray-300 text-sm">
+          <thead className="bg-indigo-50 sticky top-0 z-10 text-indigo-700">
             <tr>
-              <th className="px-4 py-3 font-semibold">STT</th>
-              <th className="px-4 py-3 font-semibold">Code</th>
-              <th className="px-4 py-3 font-semibold">Mô tả</th>
-              <th className="px-4 py-3 font-semibold">Loại giảm</th>
-              <th className="px-4 py-3 font-semibold">Giá trị</th>
-              <th className="px-4 py-3 font-semibold">Đơn tối thiểu</th>
-              <th className="px-4 py-3 font-semibold">Max giảm</th>
-              <th className="px-4 py-3 font-semibold">Ngày bắt đầu</th>
-              <th className="px-4 py-3 font-semibold">Ngày kết thúc</th>
-              <th className="px-4 py-3 font-semibold">Active</th>
-              <th className="px-4 py-3 font-semibold">Cửa hàng</th>
-              <th className="px-4 py-3 font-semibold">Sản phẩm</th>
-              <th className="px-4 py-3 font-semibold">Danh mục</th>
-              <th className="px-4 py-3 font-semibold text-center">Hành động</th>
+              {["#", "Mã Voucher", "Mô tả", "Loại giảm", "Giá trị", "Bắt đầu", "Hết hạn", "Active", "Stores", "Products", "Categories", "Actions"].map((title) => (
+                <th key={title} className="px-4 py-3 font-semibold text-left">{title}</th>
+              ))}
             </tr>
           </thead>
 
           <tbody>
-            {loading ? (
+            {currentData.length === 0 ? (
               <tr>
-                <td colSpan="14" className="p-6 text-center text-gray-500">
-                  Đang tải dữ liệu...
-                </td>
-              </tr>
-            ) : currentPageData.length === 0 ? (
-              <tr>
-                <td colSpan="14" className="p-6 text-center text-gray-500">
-                  Không có dữ liệu.
-                </td>
+                <td colSpan={12} className="text-center p-6 text-gray-500 italic">Không có voucher nào</td>
               </tr>
             ) : (
-              currentPageData.map((v, index) => (
-                <tr key={v.voucherId} className="border-t hover:bg-indigo-50/30 transition">
-                  <td className="px-4 py-3 text-gray-700 font-medium">{startIndex + index + 1}</td>
-                  <td className="px-4 py-3">{v.code}</td>
+              currentData.map((v, idx) => (
+                <tr key={v.voucherId} className="hover:bg-indigo-50 transition">
+                  <td className="px-4 py-3 font-medium">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                  <td className="px-4 py-3 font-medium text-indigo-700">{v.code}</td>
                   <td className="px-4 py-3">{v.descriptionVou}</td>
-                  <td className="px-4 py-3">{v.discountType}</td>
-                  <td className="px-4 py-3">{v.discountValue}</td>
-                  <td className="px-4 py-3">{v.minOrderAmount}</td>
-                  <td className="px-4 py-3">{v.maxDiscountAmount}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-0.5 rounded bg-indigo-500 text-white text-xs capitalize">{v.discountType}</span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-green-600">{v.discountValue}</td>
                   <td className="px-4 py-3">{v.startDate}</td>
                   <td className="px-4 py-3">{v.expiryDate}</td>
-                  <td className="px-4 py-3">{v.isActive ? "Yes" : "No"}</td>
-                  <td className="px-4 py-3">{getNamesByIds(v.storeIDs, stores, "store")}</td>
-                  <td className="px-4 py-3">{getNamesByIds(v.productIDs, products, "product")}</td>
-                  <td className="px-4 py-3">{getNamesByIds(v.categoryIDs, categories, "category")}</td>
                   <td className="px-4 py-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => { setModalVoucher(v); setShowModal(true); }}
-                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 transition"
-                        title="Sửa"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => { setToDelete(v); setConfirmOpen(true); }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition"
-                        title="Xóa"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {v.isActive ? <span className="text-green-600 font-bold">✔</span> : <span className="text-red-500 font-bold">✘</span>}
+                  </td>
+
+                  <td className="px-4 py-3">{v.stores?.map((s, i) => <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{s.storeName}</span>) || <span className="text-gray-400 italic">Không có</span>}</td>
+                  <td className="px-4 py-3">{v.products?.map((p, i) => <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{p.productName}</span>) || <span className="text-gray-400 italic">Không có</span>}</td>
+                  <td className="px-4 py-3">{v.categories?.map((c, i) => <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{c.categoryName}</span>) || <span className="text-gray-400 italic">Không có</span>}</td>
+
+                  <td className="px-4 py-3 flex gap-2 justify-center">
+                    <button onClick={() => openModal(v)} className="text-blue-600 hover:text-blue-800 transition"><Edit2 size={16} /></button>
+                    <button onClick={() => { setToDelete(v); setConfirmOpen(true); }} className="text-red-600 hover:text-red-800 transition"><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
-      </div>
+      </div> */}
+      {/* Table */}
+<div className="overflow-auto border rounded-xl shadow relative">
+  {loading && (
+    <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
+    </div>
+  )}
 
-      {/* Phân trang */}
-      {!loading && filteredVouchers.length > 0 && (
+  <table className="min-w-full border-collapse text-sm">
+    <thead className="bg-indigo-50 sticky top-0 z-10 text-indigo-700">
+      <tr>
+        {["#", "Mã", "Mô tả", "Loại", "Giá trị", "Bắt đầu", "Hết hạn", "Active", "Stores", "Products", "Categories", "Actions"].map((title) => (
+          <th key={title} className="px-3 py-2 font-semibold text-left">{title}</th>
+        ))}
+      </tr>
+    </thead>
+
+    <tbody>
+      {currentData.length === 0 ? (
+        <tr>
+          <td colSpan={12} className="text-center py-6 text-gray-500 italic">Không có voucher nào</td>
+        </tr>
+      ) : (
+        currentData.map((v, idx) => (
+          <tr key={v.voucherId} className="hover:bg-indigo-50 transition">
+            <td className="px-3 py-2 font-medium text-center">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+            <td className="px-3 py-2 font-medium text-indigo-700">{v.code}</td>
+            <td className="px-3 py-2 truncate max-w-[120px]" title={v.descriptionVou}>{v.descriptionVou}</td>
+            <td className="px-3 py-2">
+              <span className="px-2 py-0.5 rounded bg-indigo-500 text-white text-xs capitalize">{v.discountType}</span>
+            </td>
+            <td className="px-3 py-2 font-semibold text-green-600">{v.discountValue}</td>
+            <td className="px-3 py-2">{v.startDate}</td>
+            <td className="px-3 py-2">{v.expiryDate}</td>
+            <td className="px-3 py-2 text-center">{v.isActive ? <span className="text-green-600 font-bold">✔</span> : <span className="text-red-500 font-bold">✘</span>}</td>
+
+            <td className="px-3 py-2 max-w-[120px] truncate" title={v.stores?.map(s => s.storeName).join(", ")}>
+              {v.stores?.map((s, i) => (
+                <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{s.storeName}</span>
+              )) || <span className="text-gray-400 italic">Không có</span>}
+            </td>
+
+            <td className="px-3 py-2 max-w-[120px] truncate" title={v.products?.map(p => p.productName).join(", ")}>
+              {v.products?.map((p, i) => (
+                <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{p.productName}</span>
+              )) || <span className="text-gray-400 italic">Không có</span>}
+            </td>
+
+            <td className="px-3 py-2 max-w-[120px] truncate" title={v.categories?.map(c => c.categoryName).join(", ")}>
+              {v.categories?.map((c, i) => (
+                <span key={i} className="inline-block bg-gray-200 px-2 py-0.5 rounded mr-1 mb-1 text-xs">{c.categoryName}</span>
+              )) || <span className="text-gray-400 italic">Không có</span>}
+            </td>
+
+            <td className="px-3 py-2 flex gap-2 justify-center">
+              <button onClick={() => openModal(v)} className="text-blue-600 hover:text-blue-800 transition"><Edit2 size={16} /></button>
+              <button onClick={() => { setToDelete(v); setConfirmOpen(true); }} className="text-red-600 hover:text-red-800 transition"><Trash2 size={16} /></button>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
+
+
+      {/* Pagination */}
+      {filteredVouchers.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
           <div className="text-gray-600 font-medium">
-            Hiển thị <span className="text-indigo-600 font-bold">{Math.min(filteredVouchers.length, page * PAGE_SIZE)}</span> / {filteredVouchers.length} bản ghi
+            Hiển thị <span className="text-indigo-600 font-bold">{Math.min(page * PAGE_SIZE, filteredVouchers.length)}</span> / {filteredVouchers.length} bản ghi
           </div>
-
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setPage(1)}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              « Đầu
-            </button>
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ← Trước
-            </button>
-            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
-              {page} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Sau →
-            </button>
-            <button
-              onClick={() => setPage(totalPages)}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cuối »
-            </button>
+            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">« Đầu</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">← Trước</button>
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">{page} / {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Sau →</button>
+            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Cuối »</button>
           </div>
         </div>
       )}
 
       {/* Modal */}
-      {showModal && (
+      {modalOpen && (
         <VouchersModal
-          voucher={modalVoucher}
-          onClose={() => setShowModal(false)}
-          onSaved={fetchVouchers}
+          close={() => setModalOpen(false)}
+          refresh={refreshVoucher}
+          editData={editData}
           stores={stores}
           products={products}
           categories={categories}
         />
       )}
 
-      {/* Xác nhận xóa */}
-      {confirmOpen && (
+      {/* ConfirmDialog */}
+      {confirmOpen && toDelete && (
         <ConfirmDialog
           title="Xác nhận xóa"
-          message={`Bạn có chắc chắn muốn xóa Voucher "${toDelete?.code}"?`}
+          message={`Bạn có chắc chắn muốn xóa voucher "${toDelete.code}"?`}
           onCancel={() => setConfirmOpen(false)}
-          onConfirm={handleDelete}
+          onConfirm={() => handleDelete(toDelete.voucherId)}
         />
       )}
     </div>

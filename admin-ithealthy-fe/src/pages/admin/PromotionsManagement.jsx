@@ -1,58 +1,63 @@
-// pages/admin/PromotionsManagement.jsx
-import React, { useEffect, useState, useMemo } from "react";
+// src/pages/admin/PromotionsManagement.jsx
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Toaster, toast } from "react-hot-toast";
-import { PlusCircle, Edit2, Trash2, RefreshCcw, Gift } from "lucide-react";
-import PromotionModal from "../../components/admin/PromotionModal";
+import { toast } from "react-hot-toast";
+import { PlusCircle, Trash2, Edit2, RefreshCcw, Tag, Search } from "lucide-react";
+import PromotionsModal from "../../components/admin/PromotionModal";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 const PAGE_SIZE = 8;
 
 const PromotionsManagement = () => {
   const [promotions, setPromotions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toDelete, setToDelete] = useState(null);
+
+  // Data phụ
   const [stores, setStores] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modalPromotion, setModalPromotion] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
 
+  // Phân trang + search/filter
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  // 🔹 Fetch options
   const fetchOptions = async () => {
     try {
-      const [storesRes, productsRes, categoriesRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/stores"),
-        axios.get("http://localhost:5000/api/products/all-products"),
-        axios.get("http://localhost:5000/api/ingredient")
+      const [s, p, c] = await Promise.all([
+        axios.get("http://localhost:5000/api/Stores"),
+        axios.get("http://localhost:5000/api/Products/all-products"),
+        axios.get("http://localhost:5000/api/Category/category_pro"),
       ]);
-      setStores(storesRes.data);
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
-    } catch (err) {
-      toast.error("Lấy dữ liệu dropdown thất bại");
+      setStores(s.data);
+      setProducts(p.data);
+      setCategories(c.data);
+    } catch {
+      toast.error("Lỗi tải dữ liệu phụ!");
     }
   };
 
+  // 🔹 Fetch promotions
   const fetchPromotions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/promotions");
-      setPromotions(res.data);
+      const res = await axios.get("http://localhost:5000/api/Promotions");
+      const full = await Promise.all(
+        res.data.map(async (item) => {
+          const detail = await axios.get(`http://localhost:5000/api/Promotions/${item.promotionId}`);
+          return detail.data;
+        })
+      );
+      setPromotions(full);
     } catch {
-      toast.error("Lấy danh sách promotions thất bại");
+      toast.error("Lỗi tải promotions!");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (promotion) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa Promotion "${promotion.promotionName}"?`)) return;
-    try {
-      await axios.delete(`http://localhost:5000/api/promotions/${promotion.promotionId}`);
-      toast.success("Xóa thành công");
-      fetchPromotions();
-    } catch {
-      toast.error("Xóa thất bại");
     }
   };
 
@@ -61,107 +66,166 @@ const PromotionsManagement = () => {
     fetchPromotions();
   }, []);
 
-  const filteredPromotions = useMemo(() => {
-    return promotions.filter(p =>
-      p.promotionName?.toLowerCase().includes(search.toLowerCase()) ||
-      p.descriptionPromotion?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [promotions, search]);
+  const handleAdd = () => {
+    setEditData(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = async (promo) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/Promotions/${promo.promotionId}`);
+      setEditData(res.data);
+      setModalOpen(true);
+    } catch {
+      toast.error("Không lấy được dữ liệu!");
+    }
+  };
+
+  const handleConfirmDelete = (p) => {
+    setToDelete(p);
+    setConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/Promotions/${toDelete.promotionId}`);
+      toast.success("Đã xóa khuyến mãi!");
+      setPromotions((prev) => prev.filter((x) => x.promotionId !== toDelete.promotionId));
+    } catch {
+      toast.error("Xóa thất bại!");
+    } finally {
+      setConfirmOpen(false);
+      setToDelete(null);
+    }
+  };
+
+  // 🔹 Filter + search
+  const filteredPromotions = promotions
+    .filter((p) => p.promotionName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((p) => {
+      if (statusFilter === "") return true;
+      if (statusFilter === "active") return p.isActive;
+      return !p.isActive;
+    });
 
   const totalPages = Math.ceil(filteredPromotions.length / PAGE_SIZE);
   const startIndex = (page - 1) * PAGE_SIZE;
-  const endIndex = startIndex + PAGE_SIZE;
-  const currentPageData = filteredPromotions.slice(startIndex, endIndex);
+  const currentPageData = filteredPromotions.slice(startIndex, startIndex + PAGE_SIZE);
+
+  // 🔹 Refresh sau khi thêm/sửa
+  const refreshPromotion = async (data) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/Promotions/${data.promotionId}`);
+      const fullData = res.data;
+      setPromotions((prev) => {
+        const exists = prev.find((x) => x.promotionId === fullData.promotionId);
+        return exists
+          ? prev.map((x) => (x.promotionId === fullData.promotionId ? fullData : x))
+          : [...prev, fullData];
+      });
+    } catch {
+      console.error("Refresh lỗi");
+    }
+  };
 
   return (
-    <div>
-      <Toaster position="top-right" />
-      <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-          <Gift className="text-indigo-600" /> Quản lý Promotion
+    <div className="p-6">
+      {/* --- Header --- */}
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
+        {/* Tiêu đề */}
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+          <Tag className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
+          Quản lý Khuyến mãi
         </h2>
-        <div className="flex flex-wrap gap-2">
+
+        {/* Search, Filter & Buttons */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Ô tìm kiếm */}
+          <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
             <input
-          type="text"
-          placeholder="Tìm kiếm theo tên hoặc mô tả..."
-          className="border rounded-lg px-3 py-2 flex-1 min-w-[200px]"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
-          <button onClick={fetchPromotions} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg">
-            <RefreshCcw size={16}/> Làm mới
+              type="text"
+              placeholder="Tìm kiếm khuyến mãi..."
+              className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="px-3 text-gray-400 border-l border-gray-200">
+              <Search size={20} />
+            </div>
+          </div>
+
+          {/* Select trạng thái */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="active">Hoạt động</option>
+            <option value="inactive">Ngừng</option>
+          </select>
+
+          {/* Nút làm mới */}
+          <button
+            onClick={fetchPromotions}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+          >
+            <RefreshCcw className="w-4 h-4" /> Làm mới
           </button>
-          <button onClick={() => { setModalPromotion(null); setShowModal(true); }} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg">
-            <PlusCircle size={18}/> Tạo Promotion
+
+          {/* Nút thêm mới */}
+          <button
+            onClick={handleAdd}
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white font-medium rounded-xl shadow-lg hover:from-purple-700 hover:to-purple-600 transition"
+          >
+            <PlusCircle className="w-5 h-5" /> Thêm mới
           </button>
         </div>
       </div>
 
-      
 
+      {/* Table */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         <table className="min-w-full text-sm">
           <thead className="bg-indigo-50 text-indigo-700 text-left">
             <tr>
-              <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Tên Promotion</th>
-              <th className="px-4 py-3">Mô tả</th>
-              <th className="px-4 py-3">Loại giảm</th>
-              <th className="px-4 py-3">Giá trị</th>
-              <th className="px-4 py-3">Đơn tối thiểu</th>
-              <th className="px-4 py-3">Ngày bắt đầu</th>
-              <th className="px-4 py-3">Ngày kết thúc</th>
-              <th className="px-4 py-3">Active</th>
-              <th className="px-4 py-3 text-center">Cửa hàng</th>
-              <th className="px-4 py-3 text-center">Sản phẩm</th>
-              <th className="px-4 py-3 text-center">Danh mục</th>
-              <th className="px-4 py-3 text-center">Hành động</th>
+              {["#", "Tên", "Mô tả", "Loại giảm", "Giá trị", "Từ", "Đến", "Active", "Stores", "Products", "Categories", "Actions"].map((title) => (
+                <th key={title} className="px-4 py-3 font-semibold">{title}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="13" className="p-6 text-center text-gray-500">Đang tải dữ liệu...</td>
-              </tr>
+              <tr><td colSpan="12" className="p-6 text-center text-gray-500">Đang tải dữ liệu...</td></tr>
             ) : currentPageData.length === 0 ? (
-              <tr>
-                <td colSpan="13" className="p-6 text-center text-gray-500">Không có dữ liệu.</td>
-              </tr>
+              <tr><td colSpan="12" className="p-6 text-center text-gray-500">Không có dữ liệu</td></tr>
             ) : (
-              currentPageData.map((p, idx) => (
+              currentPageData.map((p, index) => (
                 <tr key={p.promotionId} className="border-t hover:bg-indigo-50/30 transition">
-                  <td className="px-4 py-3">{startIndex + idx + 1}</td>
+                  <td className="px-4 py-3 font-medium">{startIndex + index + 1}</td>
                   <td className="px-4 py-3">{p.promotionName}</td>
                   <td className="px-4 py-3">{p.descriptionPromotion}</td>
                   <td className="px-4 py-3">{p.discountType}</td>
                   <td className="px-4 py-3">{p.discountValue}</td>
-                  <td className="px-4 py-3">{p.minOrderAmount}</td>
                   <td className="px-4 py-3">{p.startDate}</td>
                   <td className="px-4 py-3">{p.endDate}</td>
-                  <td className="px-4 py-3">{p.isActive ? "Yes" : "No"}</td>
-
-                  <td className="px-4 py-3 text-center flex flex-wrap justify-center gap-1">
-                    {p.promotionStores?.map(s => (
-                      <span key={s.storeId} className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">{s.storeName}</span>
-                    ))}
+                  <td className="px-4 py-3 text-center">
+                    <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {p.isActive ? "Hoạt động" : "Ngừng"}
+                      </span>
+                    
                   </td>
-
-                  <td className="px-4 py-3 text-center flex flex-wrap justify-center gap-1">
-                    {p.promotionProducts?.map(pr => (
-                      <span key={pr.productId} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">{pr.productName}</span>
-                    ))}
-                  </td>
-
-                  <td className="px-4 py-3 text-center flex flex-wrap justify-center gap-1">
-                    {p.promotionCategories?.map(c => (
-                      <span key={c.categoryId} className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">{c.categoryName}</span>
-                    ))}
-                  </td>
-                  
-
-                  <td className="px-4 py-3 text-center flex justify-center gap-2">
-                    <button onClick={() => { setModalPromotion(p); setShowModal(true); }} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"><Edit2 size={18}/></button>
-                    <button onClick={() => handleDelete(p)} className="p-2 rounded-lg hover:bg-red-50 text-red-600"><Trash2 size={18}/></button>
+                  <td className="px-4 py-3">{p.stores?.join(", ")}</td>
+                  <td className="px-4 py-3">{p.products?.join(", ")}</td>
+                  <td className="px-4 py-3">{p.categories?.join(", ")}</td>
+                  <td className="px-4 py-3 flex gap-2">
+                    <button onClick={() => handleEdit(p)} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 transition"><Edit2 size={18} /></button>
+                    <button onClick={() => handleConfirmDelete(p)} className="p-2 rounded-lg hover:bg-yellow-50 text-red-600 transition"><Trash2 size={18} /></button>
                   </td>
                 </tr>
               ))
@@ -170,27 +234,38 @@ const PromotionsManagement = () => {
         </table>
       </div>
 
-      {/* Phân trang */}
+      {/* Pagination */}
       {!loading && filteredPromotions.length > 0 && (
-        <div className="flex items-center justify-between mt-6 gap-3 text-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
           <div className="text-gray-600 font-medium">
             Hiển thị <span className="text-indigo-600 font-bold">{Math.min(filteredPromotions.length, page * PAGE_SIZE)}</span> / {filteredPromotions.length} bản ghi
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1.5 rounded-full border bg-white text-gray-700 hover:bg-indigo-50 disabled:opacity-50">« Đầu</button>
-            <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1} className="px-3 py-1.5 rounded-full border bg-white text-gray-700 hover:bg-indigo-50 disabled:opacity-50">← Trước</button>
-            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold">{page} / {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border bg-white text-gray-700 hover:bg-indigo-50 disabled:opacity-50">Sau →</button>
-            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border bg-white text-gray-700 hover:bg-indigo-50 disabled:opacity-50">Cuối »</button>
+            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">« Đầu</button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">← Trước</button>
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">{page} / {totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Sau →</button>
+            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Cuối »</button>
           </div>
         </div>
       )}
 
-      {showModal && (
-        <PromotionModal
-          promotion={modalPromotion}
-          onClose={() => setShowModal(false)}
-          onSaved={fetchPromotions}
+      {/* Confirm delete */}
+      {confirmOpen && toDelete && (
+        <ConfirmDialog
+          title="Xác nhận xóa"
+          message={`Bạn chắc chắn muốn xóa "${toDelete.promotionName}"?`}
+          onCancel={() => { setConfirmOpen(false); setToDelete(null); }}
+          onConfirm={handleDelete}
+        />
+      )}
+
+      {/* Modal thêm/sửa */}
+      {modalOpen && (
+        <PromotionsModal
+          close={() => setModalOpen(false)}
+          editData={editData}
+          refresh={refreshPromotion}
           stores={stores}
           products={products}
           categories={categories}

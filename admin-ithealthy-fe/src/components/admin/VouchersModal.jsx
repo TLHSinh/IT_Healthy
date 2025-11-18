@@ -1,10 +1,10 @@
-// components/admin/VouchersModal.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { toast } from "react-hot-toast";
+import { toast } from "react-toastify";
+import { FaTimes } from "react-icons/fa";
 
-const VouchersModal = ({ voucher, onClose, onSaved, stores: propStores = [], products: propProducts = [], categories: propCategories = [] }) => {
-  const [formData, setFormData] = useState({
+const VouchersModal = ({ close, refresh, editData, stores, products, categories }) => {
+  const [form, setForm] = useState({
     code: "",
     descriptionVou: "",
     startDate: "",
@@ -14,230 +14,277 @@ const VouchersModal = ({ voucher, onClose, onSaved, stores: propStores = [], pro
     minOrderAmount: 0,
     maxDiscountAmount: 0,
     maxUsage: 0,
-    perCustomerLimit: 1,
+    perCustomerLimit: 0,
     isActive: true,
     isStackable: false,
-    storeIDs: [],
-    productIDs: [],
-    categoryIDs: []
   });
 
-  const [stores, setStores] = useState(propStores);
-  const [products, setProducts] = useState(propProducts);
-  const [categories, setCategories] = useState(propCategories);
-  const [loading, setLoading] = useState(false);
+  const [selectedStores, setSelectedStores] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  
 
-  // Load voucher data
   useEffect(() => {
-    setStores(propStores);
-    setProducts(propProducts);
-    setCategories(propCategories);
-
-    if (voucher) {
-      setFormData({
-        code: voucher.code || "",
-        descriptionVou: voucher.descriptionVou || "",
-        startDate: voucher.startDate || "",
-        expiryDate: voucher.expiryDate || "",
-        discountType: voucher.discountType || "percent",
-        discountValue: voucher.discountValue || 0,
-        minOrderAmount: voucher.minOrderAmount || 0,
-        maxDiscountAmount: voucher.maxDiscountAmount || 0,
-        maxUsage: voucher.maxUsage || 0,
-        perCustomerLimit: voucher.perCustomerLimit || 1,
-        isActive: voucher.isActive ?? true,
-        isStackable: voucher.isStackable ?? false,
-        storeIDs: voucher.storeIDs || [],
-        productIDs: voucher.productIDs || [],
-        categoryIDs: voucher.categoryIDs || []
+    if (editData) {
+      setForm({
+        code: editData.code || "",
+        descriptionVou: editData.descriptionVou || "",
+        startDate: editData.startDate || "",
+        expiryDate: editData.expiryDate || "",
+        discountType: editData.discountType || "percent",
+        discountValue: editData.discountValue || 0,
+        minOrderAmount: editData.minOrderAmount || 0,
+        maxDiscountAmount: editData.maxDiscountAmount || 0,
+        maxUsage: editData.maxUsage || 0,
+        perCustomerLimit: editData.perCustomerLimit || 0,
+        isActive: editData.isActive ?? true,
+        isStackable: editData.isStackable ?? false,
       });
+      setSelectedStores(editData.stores || []);
+      setSelectedProducts(editData.products || []);
+      setSelectedCategories(editData.categories || []);
     }
-  }, [voucher, propStores, propProducts, propCategories]);
+  }, [editData]);
 
-  // Handle input change
-  const handleChange = e => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  };
-
-  // Handle submit
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    const payload = {
+      ...form,
+      StoreIDs: selectedStores.map((s) => s.storeId),
+      ProductIDs: selectedProducts.map((p) => p.productId),
+      CategoryIDs: selectedCategories.map((c) => c.categoryId),
+    };
+
     try {
-      const payload = { ...formData };
-      if (voucher) {
-        await axios.put(`http://localhost:5000/api/vouchers/${voucher.voucherId}`, payload);
+      if (editData) {
+        await axios.put(`http://localhost:5000/api/vouchers/${editData.voucherId}`, payload);
         toast.success("Cập nhật voucher thành công!");
+        refresh({
+          ...editData,
+          ...payload,
+          stores: selectedStores,
+          products: selectedProducts,
+          categories: selectedCategories,
+        });
       } else {
-        await axios.post("http://localhost:5000/api/vouchers", payload);
+        const res = await axios.post("http://localhost:5000/api/vouchers", payload);
         toast.success("Tạo voucher thành công!");
+        refresh({
+          ...res.data,
+          stores: selectedStores,
+          products: selectedProducts,
+          categories: selectedCategories,
+        });
       }
-      onSaved();
-      onClose();
+      close();
     } catch (err) {
       console.error(err);
-      toast.error("Có lỗi xảy ra, kiểm tra console");
-    } finally {
-      setLoading(false);
+      toast.error("Thao tác thất bại!");
     }
   };
 
-  // Add/remove multi-select
-  const addToMultiSelect = (field, id) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: [...prev[field], id]
-    }));
+  const toggleSelection = (item, list, setList, idKey = "id") => {
+    const exists = list.find((i) => i[idKey] === item[idKey]);
+    if (exists) setList(list.filter((i) => i[idKey] !== item[idKey]));
+    else setList([...list, item]);
   };
 
-  const removeFromMultiSelect = (field, id) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].filter(i => i !== id)
-    }));
-  };
+  const renderCheckboxGroup = (label, options, selectedList, setList, idKey, nameKey) => (
+  <div className="mb-6">
+    <h3 className="font-extrabold text-xl text-black-600 mb-3">{label}</h3>
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-3xl overflow-auto max-h-[90vh]">
-        <h3 className="text-2xl font-bold mb-6 text-gray-800">{voucher ? "Sửa Voucher" : "Tạo Voucher"}</h3>
-        <form onSubmit={handleSubmit} className="space-y-6">
-
-          {/* Thông tin cơ bản */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Code</label>
-              <input type="text" name="code" value={formData.code} onChange={handleChange} required
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Mô tả</label>
-              <input type="text" name="descriptionVou" value={formData.descriptionVou} onChange={handleChange}
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
+    <div className="max-h-52 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-3 border rounded-xl bg-gray-50 shadow-inner">
+      {options.map((opt) => {
+        const isSelected = selectedList.some((s) => s[idKey] === opt[idKey]);
+        return (
+          <div
+            key={opt[idKey]}
+            className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all 
+                        ${isSelected ? "bg-orange-50 border-orange-400 shadow-md" : "bg-white hover:bg-orange-50"}`}
+            onClick={() => toggleSelection(opt, selectedList, setList, idKey)}
+          >
+            <input
+              type="checkbox"
+              checked={isSelected}
+              readOnly
+              className="h-4 w-4 accent-orange-500"
+            />
+            <span className="text-gray-800 text-sm font-medium">{opt[nameKey]}</span>
           </div>
-
-          {/* Thời gian áp dụng */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Ngày bắt đầu</label>
-              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Ngày kết thúc</label>
-              <input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleChange} required
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-          </div>
-
-          {/* Loại giảm giá */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Loại giảm</label>
-              <select name="discountType" value={formData.discountType} onChange={handleChange}
-                      className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="percent">%</option>
-                <option value="amount">Amount</option>
-                <option value="shipping">Shipping</option>
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Giá trị giảm</label>
-              <input type="number" name="discountValue" value={formData.discountValue} onChange={handleChange} required
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Đơn tối thiểu</label>
-              <input type="number" name="minOrderAmount" value={formData.minOrderAmount} onChange={handleChange}
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-          </div>
-
-          {/* Giới hạn & Switch */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Max giảm</label>
-              <input type="number" name="maxDiscountAmount" value={formData.maxDiscountAmount} onChange={handleChange}
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Max sử dụng</label>
-              <input type="number" name="maxUsage" value={formData.maxUsage} onChange={handleChange}
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex items-center space-x-6 mt-2">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-5 h-5 accent-blue-500" />
-                <span className="text-gray-700 font-medium">Active</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" name="isStackable" checked={formData.isStackable} onChange={handleChange} className="w-5 h-5 accent-blue-500" />
-                <span className="text-gray-700 font-medium">Stackable</span>
-              </label>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-600 mb-1 font-medium">Giới hạn KH</label>
-              <input type="number" name="perCustomerLimit" value={formData.perCustomerLimit} onChange={handleChange}
-                     className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-          </div>
-
-          {/* Multi-select */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/** Cửa hàng **/}
-            <MultiSelect label="Cửa hàng" field="storeIDs" options={stores} selectedIDs={formData.storeIDs} setSelectedIDs={ids => setFormData(prev => ({...prev, storeIDs: ids}))} displayKey="storeName" />
-            {/** Sản phẩm **/}
-            <MultiSelect label="Sản phẩm" field="productIDs" options={products} selectedIDs={formData.productIDs} setSelectedIDs={ids => setFormData(prev => ({...prev, productIDs: ids}))} displayKey="productName" />
-            {/** Danh mục **/}
-            <MultiSelect label="Danh mục" field="categoryIDs" options={categories} selectedIDs={formData.categoryIDs} setSelectedIDs={ids => setFormData(prev => ({...prev, categoryIDs: ids}))} displayKey="categoryName" />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end space-x-3 mt-4">
-            <button type="button" onClick={onClose} className="px-5 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">Hủy</button>
-            <button type="submit" disabled={loading} className="px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-              {loading ? "Đang xử lý..." : voucher ? "Cập nhật" : "Tạo"}
-            </button>
-          </div>
-
-        </form>
-      </div>
+        );
+      })}
     </div>
-  );
-};
+  </div>
+);
 
-// MultiSelect Component
-const MultiSelect = ({ label, field, options, selectedIDs, setSelectedIDs, displayKey }) => {
-  const add = id => {
-    if (!selectedIDs.includes(id)) setSelectedIDs([...selectedIDs, id]);
-  };
-  const remove = id => setSelectedIDs(selectedIDs.filter(i => i !== id));
 
   return (
-    <div className="flex flex-col">
-      <label className="text-gray-600 mb-1 font-medium">{label}</label>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {selectedIDs.map(id => {
-          const item = options.find(o => o[`${field.replace("IDs","Id")}`] === id);
-          if (!item) return null;
-          return (
-            <span key={id} className={`px-2 py-1 rounded-full flex items-center space-x-1 bg-${label==='Cửa hàng'?'blue':'Sản phẩm'?'green':'purple'}-100 text-${label==='Cửa hàng'?'blue':'Sản phẩm'?'green':'purple'}-800`}>
-              <span>{item[displayKey]}</span>
-              <button type="button" onClick={() => remove(id)} className="font-bold">×</button>
-            </span>
-          );
-        })}
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+
+      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex justify-between items-center bg-indigo-500 text-white px-8 py-6 sticky top-0 z-10">
+          <h2 className="text-3xl font-bold tracking-wide">
+            {editData ? "Cập nhật Voucher" : "Tạo Voucher Mới"}
+          </h2>
+          <button onClick={close} className="p-2 hover:bg-white/30 rounded-full transition">
+            <FaTimes size={24} />
+          </button>
+        </div>
+
+        {/* Nội dung cuộn */}
+        <div className="max-h-[75vh] overflow-y-auto px-10 py-8 space-y-6">
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Mã & mô tả */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-gray-700 font-semibold">Mã voucher</label>
+                <input
+                  type="text"
+                  disabled={!!editData}
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  className="w-full p-3 mt-2 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-400 outline-none"
+                  placeholder="VD: SALE50"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-700 font-semibold">Giá trị giảm</label>
+                <input
+                  type="number"
+                  value={form.discountValue}
+                  onChange={(e) => setForm({ ...form, discountValue: Number(e.target.value) })}
+                  className="w-full p-3 mt-2 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-400 outline-none"
+                  placeholder="Ví dụ: 30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-gray-700 font-semibold">Mô tả</label>
+              <textarea
+                value={form.descriptionVou}
+                onChange={(e) => setForm({ ...form, descriptionVou: e.target.value })}
+                className="w-full p-3 mt-2 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-400 outline-none"
+                placeholder="Mô tả voucher…"
+              />
+            </div>
+
+            {/* Ngày */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="font-semibold">Ngày bắt đầu</label>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  className="w-full p-3 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="font-semibold">Ngày hết hạn</label>
+                <input
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                  className="w-full p-3 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Loại giảm */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="font-semibold">Loại giảm</label>
+                <select
+                  value={form.discountType}
+                  onChange={(e) => setForm({ ...form, discountType: e.target.value })}
+                  className="w-full p-3 mt-2 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                >
+                  <option value="percent">Percent (%)</option>
+                  <option value="fixed">Fixed (đ)</option>
+                  <option value="FreeShipping">Free Shipping</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-semibold">Đơn hàng tối thiểu</label>
+                <input
+                  type="number"
+                  value={form.minOrderAmount}
+                  onChange={(e) => setForm({ ...form, minOrderAmount: Number(e.target.value) })}
+                  className="w-full p-3 mt-2 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            {/* Giới hạn & checkbox */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="font-semibold">Giảm tối đa</label>
+                <input
+                  type="number"
+                  value={form.maxDiscountAmount}
+                  onChange={(e) => setForm({ ...form, maxDiscountAmount: Number(e.target.value) })}
+                  className="w-full p-3 mt-2 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="font-semibold">Số lần dùng tối đa</label>
+                <input
+                  type="number"
+                  value={form.maxUsage}
+                  onChange={(e) => setForm({ ...form, maxUsage: Number(e.target.value) })}
+                  className="w-full p-3 mt-2 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Trạng thái */}
+            <div className="flex gap-10 mt-2">
+              <label className="flex items-center gap-3 font-medium">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  className="h-5 w-5 accent-green-600"
+                />
+                Active
+              </label>
+
+              <label className="flex items-center gap-3 font-medium">
+                <input
+                  type="checkbox"
+                  checked={form.isStackable}
+                  onChange={(e) => setForm({ ...form, isStackable: e.target.checked })}
+                  className="h-5 w-5 accent-purple-600"
+                />
+                Stackable
+              </label>
+            </div>
+
+            {/* Checkbox groups */}
+            {renderCheckboxGroup("Cửa hàng áp dụng", stores, selectedStores, setSelectedStores, "storeId", "storeName")}
+            {renderCheckboxGroup("Sản phẩm áp dụng", products, selectedProducts, setSelectedProducts, "productId", "productName")}
+            {renderCheckboxGroup("Danh mục áp dụng", categories, selectedCategories, setSelectedCategories, "categoryId", "categoryName")}
+
+            {/* Button */}
+            <button
+              type="submit"
+              className="w-full py-3 mt-2 rounded-2xl bg-gradient-to-r from-green-500 to-green-400 text-white font-bold text-lg shadow-lg hover:opacity-90 transition-all"
+            >
+              {editData ? "Cập nhật Voucher" : "Tạo Voucher"}
+            </button>
+
+          </form>
+        </div>
+
       </div>
-      <select value="" onChange={e => { const val = parseInt(e.target.value); if (val) add(val); }}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-        <option value="" disabled>Chọn {label}</option>
-        {options.map(o => <option key={o[`${field.replace("IDs","Id")}`]} value={o[`${field.replace("IDs","Id")}`]}>{o[displayKey]}</option>)}
-      </select>
     </div>
   );
 };

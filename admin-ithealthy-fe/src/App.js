@@ -19,7 +19,12 @@ import RevenueDashboard from "./pages/admin/RevenueDashboard";
 import VouchersManagement from "./pages/admin/VouchersManagement";
 import PromotionsManagement from "./pages/admin/PromotionsManagement";
 
+//Oder
+import ShippingManagement from "./pages/admin/ShippingOrdersPage.jsx";
+import PickupManagement from "./pages/admin/PickupOrdersPage.jsx";
 
+
+//
 import AdminLayout from "./layouts/AdminLayout";
 
 function App() {
@@ -57,11 +62,15 @@ function App() {
           {/* <Route path="/admin/store-inventory/:storeId" element={<StoreInventoryManagement />} /> */}
 
 
+
           <Route path="/admin/vouchers" element={<VouchersManagement />} />
           <Route path="/admin/promotions" element={<PromotionsManagement />} />
 
+          <Route path="/admin/order-shipping" element={<ShippingManagement />} />
+          <Route path="/admin/order-pickup" element={<PickupManagement />} />
+
+
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
-         
 
           <Route path="/admin/revenue" element={<RevenueDashboard />} />
 

@@ -119,7 +119,7 @@ const StaffModal = ({ staff, isCreate = false, stores = [], onClose, onSave, isV
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative animate-fadeIn">
         {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
-          <h3 className="text-xl font-semibold flex items-center gap-2 text-indigo-700">
+          <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-700">
             {isCreate ? (
                           <>
                             <UserPlus size={20} /> Thêm Nhân viên

@@ -20,7 +20,7 @@ namespace ITHealthy.Controllers
             _context = context;
         }
 
-        
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetAllVouchers()
         {
@@ -129,7 +129,7 @@ namespace ITHealthy.Controllers
             _context.Vouchers.Add(voucher);
             await _context.SaveChangesAsync();
 
-         
+
             if (request.StoreIDs != null && request.StoreIDs.Count > 0)
             {
                 foreach (var storeId in request.StoreIDs)
@@ -142,7 +142,7 @@ namespace ITHealthy.Controllers
                 }
             }
 
-          
+
             if (request.ProductIDs != null && request.ProductIDs.Count > 0)
             {
                 foreach (var productId in request.ProductIDs)
@@ -155,7 +155,7 @@ namespace ITHealthy.Controllers
                 }
             }
 
-          
+
             if (request.CategoryIDs != null && request.CategoryIDs.Count > 0)
             {
                 foreach (var categoryId in request.CategoryIDs)
@@ -170,11 +170,11 @@ namespace ITHealthy.Controllers
 
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetVoucherById), new { id = voucher.VoucherId }, new 
+            return CreatedAtAction(nameof(GetVoucherById), new { id = voucher.VoucherId }, new
             { message = "Tạo voucher thành công.", voucher });
         }
 
-     
+
         [HttpPut("{id}")]
         public async Task<ActionResult> UpdateVoucher(int id, [FromBody] VoucherCreateRequest request)
         {
@@ -194,12 +194,12 @@ namespace ITHealthy.Controllers
             voucher.IsActive = request.IsActive;
             voucher.IsStackable = request.IsStackable;
 
-       
+
             _context.VoucherStores.RemoveRange(_context.VoucherStores.Where(vs => vs.VoucherId == id));
             _context.VoucherProducts.RemoveRange(_context.VoucherProducts.Where(vp => vp.VoucherId == id));
             _context.VoucherCategories.RemoveRange(_context.VoucherCategories.Where(vc => vc.VoucherId == id));
 
-         
+
             if (request.StoreIDs != null)
                 _context.VoucherStores.AddRange(request.StoreIDs.Select(storeId => new VoucherStore { VoucherId = id, StoreId = storeId }));
 
@@ -286,6 +286,8 @@ namespace ITHealthy.Controllers
             return Ok(vouchers);
         }
 
+
+
         // api/vouchers/category/{categoryId}
         [HttpGet("category/{categoryId}")]
         public async Task<ActionResult<IEnumerable<object>>> GetVouchersByCategory(int categoryId)
@@ -312,6 +314,159 @@ namespace ITHealthy.Controllers
 
             return Ok(vouchers);
         }
+
+
+
+        [HttpPost("validate")]
+        public async Task<IActionResult> ValidateVoucher([FromBody] ValidateVoucherRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Code))
+                return BadRequest(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Vui lòng nhập mã voucher."
+                });
+
+            var voucher = await _context.Vouchers
+                .Include(v => v.VoucherRedemptions)
+                .FirstOrDefaultAsync(v => v.Code == request.Code);
+
+            if (voucher == null)
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Mã voucher không tồn tại."
+                });
+
+            // Kiểm tra ACTIVE
+            if (voucher.IsActive == false)
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Voucher đã bị khóa hoặc không còn hiệu lực."
+                });
+
+            // Kiểm tra ngày bắt đầu
+            if (voucher.StartDate.HasValue && voucher.StartDate.Value > DateOnly.FromDateTime(DateTime.Now))
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Voucher chưa bắt đầu."
+                });
+
+            // Kiểm tra ngày hết hạn
+            if (voucher.ExpiryDate.HasValue && voucher.ExpiryDate.Value < DateOnly.FromDateTime(DateTime.Now))
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Voucher đã hết hạn."
+                });
+
+            // Giới hạn tổng số lần dùng
+            if (voucher.MaxUsage.HasValue && voucher.UsedCount >= voucher.MaxUsage)
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Voucher đã đạt số lần sử dụng tối đa."
+                });
+
+            // Giới hạn theo từng khách hàng
+            if (voucher.PerCustomerLimit.HasValue)
+            {
+                int usedByCustomer = voucher.VoucherRedemptions
+                    .Count(v => v.CustomerId == request.CustomerId);
+
+                if (usedByCustomer >= voucher.PerCustomerLimit)
+                    return Ok(new ValidateVoucherResponse
+                    {
+                        Valid = false,
+                        Message = "Bạn đã sử dụng voucher này quá số lần cho phép."
+                    });
+            }
+
+            // Kiểm tra giá trị đơn hàng tối thiểu
+            if (voucher.MinOrderAmount.HasValue && request.OrderTotal < voucher.MinOrderAmount)
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = $"Đơn hàng cần tối thiểu {voucher.MinOrderAmount.Value:N0}đ để áp dụng voucher."
+                });
+
+            // ===== TÍNH SỐ TIỀN GIẢM =====
+            decimal discount = 0;
+            Console.WriteLine("OrderTotal: " + request.OrderTotal);
+            Console.WriteLine("DiscountType: " + voucher.DiscountType);
+            Console.WriteLine("DiscountValue: " + voucher.DiscountValue);
+            Console.WriteLine("DiscountBeforeMax: " + discount);
+
+            //giảm theo phần trăm
+            if (voucher.DiscountType == "percent")
+            {
+                discount = request.OrderTotal * (voucher.DiscountValue ?? 0) / 100;
+
+                // Giới hạn mức giảm tối đa
+                if (voucher.MaxDiscountAmount.HasValue)
+                    discount = Math.Min(discount, voucher.MaxDiscountAmount.Value);
+            }
+            //giảm theo số tiền
+            else if (voucher.DiscountType == "fixed")
+            {
+                discount = voucher.DiscountValue ?? 0;
+            }
+            // Miễn phí vận chuyển
+            else if (voucher.DiscountType == "FreeShipping")
+            {
+                // giảm toàn bộ phí ship (FE cần gửi ShippingFee)
+                discount = request.ShippingFee;
+
+                if (voucher.MaxDiscountAmount.HasValue)
+                    discount = Math.Min(discount, voucher.MaxDiscountAmount.Value);
+            }
+
+            if (discount <= 0)
+                return Ok(new ValidateVoucherResponse
+                {
+                    Valid = false,
+                    Message = "Voucher không hợp lệ cho đơn hàng này."
+                });
+
+            return Ok(new ValidateVoucherResponse
+            {
+                Valid = true,
+                Message = "Áp dụng voucher thành công!",
+                VoucherId = voucher.VoucherId,
+                DiscountAmount = discount
+            });
+        }
+
+
+        [HttpPost("redeem")]
+        public async Task<IActionResult> RedeemVoucher([FromBody] RedeemVoucherRequest request)
+        {
+            var voucher = await _context.Vouchers
+                .Include(v => v.VoucherRedemptions)
+                .FirstOrDefaultAsync(v => v.VoucherId == request.VoucherId);
+
+            if (voucher == null) return NotFound("Voucher không tồn tại");
+
+            // Tăng tổng số lần dùng
+            voucher.UsedCount++;
+
+            // Lưu bản ghi khách đã dùng
+            _context.VoucherRedemptions.Add(new VoucherRedemption
+            {
+                VoucherId = voucher.VoucherId,
+                CustomerId = request.CustomerId,
+                OrderId = request.OrderId,
+                Amount = request.Amount,
+                RedeemedAt = DateTime.Now
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Voucher đã được redeem thành công" });
+        }
+
     }
 
 }

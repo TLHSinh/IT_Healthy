@@ -1,65 +1,107 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, ChefHat, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useRef, useState, useContext } from "react";
+import { Clock, ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
+import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 
-const MealCard = ({ meal }) => {
+const MealCard = ({ meal, onAddToCart }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 min-w-[360px] flex-shrink-0">
-      {/* Image Container */}
-      <div className="relative mb-4">
-        <div className="w-full h-72 rounded-xl overflow-hidden bg-gray-100">
-          <img 
-            src={meal.imageProduct || '/api/placeholder/400/320'} 
-            alt={meal.productName}
-            className="w-full h-full object-cover object-center"
+    <div className="group relative flex flex-col items-center bg-[#fff8f0] rounded-3xl p-5 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden min-w-[320px] flex-shrink-0">
+      {/* ❤️ Icon yêu thích */}
+      <div
+        className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full"
+        style={{ backgroundColor: "#ff623e", color: "#f5edd8" }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          className="w-6 h-6"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
+             2 6 3.5 4 5.5 4c1.54 0 3.04.99 3.57 2.36h1.87C13.46 4.99 
+             14.96 4 16.5 4 18.5 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 
+             11.54L12 21.35z"
           />
-        </div>
-        {/* Icon Badge */}
-        <div className={`absolute top-4 left-4 w-12 h-12 rounded-full flex items-center justify-center ${
-          meal.badge === 'chef' ? 'bg-yellow-400' : 'bg-red-400'
-        }`}>
-          {meal.badge === 'chef' ? (
-            <ChefHat className="w-6 h-6 text-white" />
-          ) : (
-            <Clock className="w-6 h-6 text-white" />
-          )}
-        </div>
+        </svg>
       </div>
 
-      {/* Meal Info */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xl font-bold text-gray-800">{meal.code || 'B1'}</h3>
-          <span className="px-4 py-1 bg-gray-100 rounded-full text-sm font-semibold">
-            {meal.calories || 0} CALORIES
+      {/* Ảnh sản phẩm */}
+      <div className="relative w-full flex justify-center mb-4">
+        <img
+          src={meal.imageProduct || "/api/placeholder/400/320"}
+          alt={meal.productName}
+          className="group-hover:drop-shadow-2xl w-48 h-48 object-contain drop-shadow-md rounded-full bg-white p-4 transform transition-transform duration-500 group-hover:-translate-y-3 group-hover:scale-110"
+        />
+      </div>
+
+      {/* Tên & Calories */}
+      <div className="flex justify-between items-center w-full mb-2">
+        <h3 className="text-xl font-bold text-[#3E0D1C]">{meal.productName}</h3>
+        {meal.calories && (
+          <span className="text-sm font-semibold text-[#3E0D1C] border border-[#3E0D1C] rounded-full px-3 py-1">
+            {meal.calories} CAL
           </span>
-        </div>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          {meal.descriptionProduct || meal.ingredients?.join(', ')}
-        </p>
+        )}
       </div>
 
-      {/* Nutrition Info */}
-      <div className="border-t border-gray-200 pt-4">
-        <div className="flex justify-between items-center">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-800">
-              {meal.protein || 0}
-            </div>
-            <div className="text-xs text-gray-500 uppercase">Protein</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-800">
-              {meal.carbs || 0}
-            </div>
-            <div className="text-xs text-gray-500 uppercase">Carbs</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-800">
-              {meal.fat || 0}
-            </div>
-            <div className="text-xs text-gray-500 uppercase">Fat</div>
-          </div>
+      {/* Mô tả */}
+      <p className="text-gray-700 text-sm mb-3 text-center min-h-[40px]">
+        {meal.descriptionProduct || meal.ingredients?.join(", ") || "—"}
+      </p>
+
+      {/* Dấu chấm ngăn cách */}
+      <div
+        className="w-full h-[2px] mb-2"
+        style={{
+          backgroundImage:
+            "radial-gradient(currentColor 2.5px, transparent 2px)",
+          backgroundSize: "10px 4px",
+          backgroundRepeat: "repeat-x",
+          color: "#928e8eff",
+        }}
+      ></div>
+
+      {/* Dinh dưỡng */}
+      <div className="flex justify-around w-full text-[#3E0D1C] font-semibold mb-4">
+        <div className="flex flex-col items-center">
+          <span className="text-lg">{meal.protein || 0}</span>
+          <span className="text-xs tracking-wide text-gray-500">PROTEIN</span>
         </div>
+        <div className="flex flex-col items-center">
+          <span className="text-lg">{meal.carbs || 0}</span>
+          <span className="text-xs tracking-wide text-gray-500">CARBS</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-lg">{meal.fat || 0}</span>
+          <span className="text-xs tracking-wide text-gray-500">FAT</span>
+        </div>
+      </div>
+
+      {/* Giá & nút thêm vào giỏ */}
+      <div className="flex items-center justify-between w-full mt-auto">
+        <span className="text-xl font-bold text-[#ff623e]">
+          {meal.basePrice?.toLocaleString("vi-VN") || 0}₫
+        </span>
+        <button
+          onClick={() => onAddToCart && onAddToCart(meal)}
+          className="w-10 h-10 flex items-center justify-center bg-[#ff623e] text-white rounded-full hover:bg-[#e55734] transition-all"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -71,26 +113,47 @@ const MealCarousel = () => {
   const [error, setError] = useState(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = React.useRef(null);
+  const { user } = useContext(AuthContext); // 🟢 Lấy thông tin user hiện tại
 
   useEffect(() => {
     fetchMeals();
   }, []);
 
+  const handleAddToCart = async (product) => {
+    try {
+      const dto = {
+        customerId: user?.customerId || 1, // hoặc lấy từ context
+        productId: product.productId,
+        comboId: null,
+        bowlId: null,
+        quantity: 1,
+        unitPrice: product.basePrice,
+      };
+      const res = await axios.post("http://localhost:5000/api/cart/add", dto);
+      alert(res.data.message || "Đã thêm sản phẩm vào giỏ hàng!");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể thêm vào giỏ hàng. Vui lòng thử lại!");
+    }
+  };
+
   const fetchMeals = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/products/all-products');
-      
+      const response = await fetch(
+        "http://localhost:5000/api/products/all-products"
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setMeals(data);
       setError(null);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching meals:', err);
+      console.error("Error fetching meals:", err);
       // Sample data for demo
     } finally {
       setLoading(false);
@@ -100,13 +163,14 @@ const MealCarousel = () => {
   const scroll = (direction) => {
     if (scrollContainerRef.current) {
       const scrollAmount = 340; // card width + gap
-      const newPosition = direction === 'left' 
-        ? scrollPosition - scrollAmount 
-        : scrollPosition + scrollAmount;
-      
+      const newPosition =
+        direction === "left"
+          ? scrollPosition - scrollAmount
+          : scrollPosition + scrollAmount;
+
       scrollContainerRef.current.scrollTo({
         left: newPosition,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
       setScrollPosition(newPosition);
     }
@@ -132,7 +196,7 @@ const MealCarousel = () => {
         <div className="relative">
           {/* Left Arrow */}
           <button
-            onClick={() => scroll('left')}
+            onClick={() => scroll("left")}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={scrollPosition <= 0}
           >
@@ -143,23 +207,25 @@ const MealCarousel = () => {
           <div
             ref={scrollContainerRef}
             className="flex gap-6 overflow-x-auto scrollbar-hide px-12"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {meals.map((meal, index) => (
-              <MealCard key={meal.id || index} meal={meal} />
+              <MealCard
+                key={meal.productId || index}
+                meal={meal}
+                onAddToCart={handleAddToCart}
+              />
             ))}
           </div>
 
           {/* Right Arrow */}
           <button
-            onClick={() => scroll('right')}
+            onClick={() => scroll("right")}
             className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50 transition-colors"
           >
             <ChevronRight className="w-6 h-6 text-gray-800" />
           </button>
         </div>
-
-
       </div>
 
       <style>{`
