@@ -80,8 +80,9 @@ export default function MenuPage() {
       {/* ===== Hiển thị từng category ===== */}
       <div className="max-w-7xl mx-auto flex flex-col gap-16 px-6 ">
         {categories.map((cat) => {
-          const filteredProducts = products.filter((p) =>
-            (p.categoryName ?? "").toLowerCase()
+          const filteredProducts = products.filter(
+            (p) =>
+              p.categoryName.toLowerCase() === cat.categoryName.toLowerCase()
           );
 
           // Tạo ref cho từng section
