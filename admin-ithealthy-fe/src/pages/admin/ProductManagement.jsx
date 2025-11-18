@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { adminApi } from "../../api/adminApi";
-import { PlusCircle, Trash2, Edit2, RefreshCcw, Package, Grid, List } from "lucide-react";
+import { PlusCircle, Trash2, Edit2, RefreshCcw, Package, Grid, List, Search } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import ProductModal from "../../components/admin/ProductModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
@@ -96,62 +96,95 @@ const ProductManagement = () => {
   };
 
   return (
-    <div>
+    <div className="p-6">
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Header */}
+      {/* --- Header --- */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-          <Package className="text-indigo-600" /> Quản lý sản phẩm
+        {/* Tiêu đề */}
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+          <Package className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
+          Quản lý sản phẩm
         </h2>
-        <div className="flex flex-wrap gap-2 items-center">
+
+        {/* Search, Filter & Buttons */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Bộ lọc & tìm kiếm */}
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <select
+              className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+              value={filterCategory}
+              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+            >
+              <option value="">Tất cả danh mục</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+              <input
+                type="text"
+                placeholder="Tìm theo tên sản phẩm..."
+                className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+              <div className="px-3 text-gray-400 border-l border-gray-200">
+                <Search size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Nút làm mới */}
           <button
             onClick={fetchProducts}
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
           >
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw className="w-4 h-4" /> Làm mới
           </button>
+
+          {/* Nút thêm sản phẩm */}
           <button
             onClick={handleAddNew}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium rounded-xl shadow-lg hover:from-indigo-700 hover:to-indigo-600 transition"
           >
-            <PlusCircle size={18} /> Thêm sản phẩm
+            <PlusCircle className="w-5 h-5" /> Thêm sản phẩm
           </button>
 
           {/* Chuyển chế độ Table / Card */}
-          <div className="flex gap-2 border rounded-lg overflow-hidden">
+          {/* <div className="flex gap-2 border rounded-xl overflow-hidden">
             <button
               onClick={() => setViewMode("table")}
               className={`flex items-center gap-1 px-4 py-2 transition ${viewMode === "table" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
             >
-              <List size={16} /> Table
+              <List className="w-4 h-4" /> Table
             </button>
             <button
               onClick={() => setViewMode("card")}
               className={`flex items-center gap-1 px-4 py-2 transition ${viewMode === "card" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
             >
-              <Grid size={16} /> Card
+              <Grid className="w-4 h-4" /> Card
+            </button>
+          </div> */}
+          {/* Chuyển chế độ Table / Card chỉ icon */}
+          <div className="flex gap-2 border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex items-center justify-center px-2 py-2 transition ${viewMode === "table" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              title="Table view"
+            >
+              <List className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode("card")}
+              className={`flex items-center justify-center px-2 py-2 transition ${viewMode === "card" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              title="Card view"
+            >
+              <Grid className="w-5 h-5" />
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Bộ lọc & tìm kiếm */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select
-          className="border rounded px-3 py-2"
-          value={filterCategory}
-          onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
-        >
-          {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-        </select>
-        <input
-          type="text"
-          placeholder="Tìm theo tên sản phẩm..."
-          className="border rounded px-3 py-2 flex-1 min-w-[200px]"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
       </div>
 
       {/* Table Mode */}

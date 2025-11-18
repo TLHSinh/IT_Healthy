@@ -1,22 +1,21 @@
 // src/components/admin/IngredientModal.jsx
 import React, { useEffect, useState } from "react";
-import { Modal, Input, InputNumber, Switch, Button, Upload, Image } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { ImagePlus } from "lucide-react"; // icon cho upload
 
 const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
   const [form, setForm] = useState({
-    ingredientName: "",    // Tên nguyên liệu (string) - bắt buộc
-    unit: "",              // Đơn vị (string, ví dụ: "kg", "g", "chai") - bắt buộc
-    basePrice: 0,          // Giá gốc (number, vnđ)
-    calories: 0,           // Calories (number)
-    protein: 0,            // Protein (number, g)
-    carbs: 0,              // Carbs (number, g)
-    fat: 0,                // Fat (number, g)
-    imageIngredients: "",  // URL ảnh (string) nếu muốn nhập trực tiếp
-    imageFile: null,       // File ảnh upload mới
-    isAvailable: true,     // Còn hàng hay hết hàng (boolean)
+    ingredientName: "",
+    unit: "",
+    basePrice: 0,
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    imageIngredients: "",
+    imageFile: null,
+    imagePreview: "",
+    isAvailable: true,
   });
 
   useEffect(() => {
@@ -31,6 +30,7 @@ const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
         fat: ingredient.fat,
         imageIngredients: ingredient.imageIngredients || "",
         imageFile: null,
+        imagePreview: ingredient.imageIngredients || "",
         isAvailable: ingredient.isAvailable ?? true,
       });
     } else {
@@ -44,12 +44,24 @@ const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
         fat: 0,
         imageIngredients: "",
         imageFile: null,
+        imagePreview: "",
         isAvailable: true,
       });
     }
   }, [ingredient]);
 
   const handleChange = (key, value) => setForm({ ...form, [key]: value });
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: URL.createObjectURL(file),
+      }));
+    }
+  };
 
   const handleSave = async () => {
     if (!form.ingredientName || !form.unit) {
@@ -71,18 +83,13 @@ const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
       if (form.imageFile) formData.append("ImageIngredients", form.imageFile);
       else if (form.imageIngredients) formData.append("ImageIngredients", form.imageIngredients);
 
-      if (ingredient) {
-        await axios.put(`http://localhost:5000/api/ingredient/${ingredient.ingredientId}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        toast.success("Cập nhật nguyên liệu thành công!");
-      } else {
-        await axios.post("http://localhost:5000/api/ingredient", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        toast.success("Thêm nguyên liệu thành công!");
-      }
+      const url = ingredient
+        ? `http://localhost:5000/api/ingredient/${ingredient.ingredientId}`
+        : "http://localhost:5000/api/ingredient";
+      const method = ingredient ? "PUT" : "POST";
 
+      await fetch(url, { method, body: formData });
+      toast.success(ingredient ? "Cập nhật nguyên liệu thành công!" : "Thêm nguyên liệu thành công!");
       onSaved();
       onClose();
     } catch (err) {
@@ -94,7 +101,7 @@ const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
   const handleDelete = async () => {
     if (!ingredient) return;
     try {
-      await axios.delete(`http://localhost:5000/api/ingredient/${ingredient.ingredientId}`);
+      await fetch(`http://localhost:5000/api/ingredient/${ingredient.ingredientId}`, { method: "DELETE" });
       toast.success("Đã xóa nguyên liệu thành công!");
       onSaved();
       onClose();
@@ -104,93 +111,186 @@ const IngredientModal = ({ visible, onClose, ingredient, onSaved }) => {
     }
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      title={ingredient ? "Cập nhật nguyên liệu" : "Thêm nguyên liệu"}
-      open={visible}
-      onCancel={onClose}
-      footer={[
-        ingredient && (
-          <Button danger key="delete" onClick={handleDelete}>
-            Xóa
-          </Button>
-        ),
-        <Button key="cancel" onClick={onClose}>
-          Hủy
-        </Button>,
-        <Button key="save" type="primary" onClick={handleSave}>
-          Lưu
-        </Button>,
-      ]}
-    >
-      {/* Tên nguyên liệu (bắt buộc) */}
-      <Input
-        placeholder="Tên nguyên liệu (ví dụ: Sữa tươi, Bột cacao)"
-        value={form.ingredientName}
-        onChange={(e) => handleChange("ingredientName", e.target.value)}
-        className="mb-2"
-      />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-lg relative">
+        <h2 className="text-xl font-bold mb-4">
+  {ingredient ? "✏️ Cập nhật nguyên liệu" : "➕ Thêm nguyên liệu"}
+</h2>
 
-      {/* Đơn vị (bắt buộc) */}
-      <Input
-        placeholder="Đơn vị (ví dụ: kg, g, chai)"
-        value={form.unit}
-        onChange={(e) => handleChange("unit", e.target.value)}
-        className="mb-2"
-      />
 
-      {/* Giá gốc */}
-      <InputNumber
-        placeholder="Giá gốc (vnđ)"
-        value={form.basePrice}
-        onChange={v => handleChange("basePrice", v)}
-        className="mb-2 w-full"
-      />
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+          {/* Tên nguyên liệu */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Tên nguyên liệu <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Ví dụ: Sữa tươi, Bột cacao"
+              value={form.ingredientName}
+              onChange={(e) => handleChange("ingredientName", e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            />
+          </div>
 
-      {/* Dinh dưỡng */}
-      <InputNumber placeholder="Calories" value={form.calories} onChange={v => handleChange("calories", v)} className="mb-2 w-full" />
-      <InputNumber placeholder="Protein (g)" value={form.protein} onChange={v => handleChange("protein", v)} className="mb-2 w-full" />
-      <InputNumber placeholder="Carbs (g)" value={form.carbs} onChange={v => handleChange("carbs", v)} className="mb-2 w-full" />
-      <InputNumber placeholder="Fat (g)" value={form.fat} onChange={v => handleChange("fat", v)} className="mb-2 w-full" />
+          {/* Đơn vị */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Đơn vị <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Ví dụ: kg, g, chai"
+              value={form.unit}
+              onChange={(e) => handleChange("unit", e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            />
+          </div>
 
-      {/* Upload ảnh */}
-      <Upload
-        beforeUpload={file => {
-          handleChange("imageFile", file);
-          return false;
-        }}
-        accept="image/*"
-        showUploadList={false}
-      >
-        <Button icon={<UploadOutlined />} className="mb-2 w-full">
-          Chọn ảnh (hoặc điền URL ở dưới)
-        </Button>
-      </Upload>
+          {/* Giá gốc */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Giá gốc (vnđ)</label>
+            <input
+              type="number"
+              value={form.basePrice}
+              onChange={(e) => handleChange("basePrice", parseFloat(e.target.value))}
+              className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            />
+          </div>
 
-      {/* Preview ảnh */}
-      {form.imageFile ? (
-        <Image src={URL.createObjectURL(form.imageFile)} width={120} height={120} alt="preview" className="mb-2" />
-      ) : form.imageIngredients ? (
-        <Image src={form.imageIngredients} width={120} height={120} alt="preview" className="mb-2" />
-      ) : null}
+          {/* Dinh dưỡng */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Calories</label>
+              <input
+                type="number"
+                value={form.calories}
+                onChange={(e) => handleChange("calories", parseFloat(e.target.value))}
+                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Protein (g)</label>
+              <input
+                type="number"
+                value={form.protein}
+                onChange={(e) => handleChange("protein", parseFloat(e.target.value))}
+                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Carbs (g)</label>
+              <input
+                type="number"
+                value={form.carbs}
+                onChange={(e) => handleChange("carbs", parseFloat(e.target.value))}
+                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Fat (g)</label>
+              <input
+                type="number"
+                value={form.fat}
+                onChange={(e) => handleChange("fat", parseFloat(e.target.value))}
+                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+          </div>
 
-      {/* URL ảnh (không bắt buộc nếu upload file) */}
-      <Input
-        placeholder="Link ảnh (nếu không upload)"
-        value={form.imageIngredients}
-        onChange={(e) => handleChange("imageIngredients", e.target.value)}
-        className="mb-2"
-      />
+          {/* Ảnh nguyên liệu */}
+          <div className="flex flex-col items-center gap-3">
+            {form.imagePreview ? (
+              <div className="flex flex-col items-center gap-2">
+                <label htmlFor="fileUpload" className="cursor-pointer">
+                  <img
+                    src={form.imagePreview}
+                    alt="preview"
+                    className="w-32 h-32 object-cover rounded-lg border hover:opacity-80 transition"
+                  />
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("fileUpload").click()}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Thay ảnh
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        imageFile: null,
+                        imagePreview: "",
+                      }))
+                    }
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Xóa ảnh
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label
+                htmlFor="fileUpload"
+                className="flex items-center justify-center w-full p-4 border-2 border-dashed rounded-lg text-gray-500 cursor-pointer hover:bg-gray-50 transition"
+              >
+                <ImagePlus className="mr-2" size={20} />
+                Chọn ảnh từ thiết bị
+              </label>
+            )}
 
-      {/* Trạng thái còn hàng */}
-      <div className="flex items-center mt-2">
-        <span className="mr-2">Còn hàng:</span>
-        <Switch
-          checked={form.isAvailable}
-          onChange={checked => handleChange("isAvailable", checked)}
-        />
+            <input
+              id="fileUpload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* Trạng thái */}
+          <div className="flex items-center space-x-2 mt-2">
+            <span>Còn hàng:</span>
+            <input
+              type="checkbox"
+              checked={form.isAvailable}
+              onChange={(e) => handleChange("isAvailable", e.target.checked)}
+              className="h-5 w-5 text-blue-500 rounded border-gray-300"
+            />
+          </div>
+        </div>
+
+        {/* Nút hành động */}
+        <div className="mt-4 flex justify-end gap-2">
+          {ingredient && (
+            <button
+              onClick={handleDelete}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Xóa
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Lưu
+          </button>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 

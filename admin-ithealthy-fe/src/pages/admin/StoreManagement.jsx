@@ -1,7 +1,7 @@
 // src/pages/admin/StoreManagement.jsx
 import React, { useEffect, useState } from "react";
 import { adminApi } from "../../api/adminApi";
-import { Store, PlusCircle, Trash2, Edit2, RefreshCcw } from "lucide-react";
+import { Store, PlusCircle, Trash2, Edit2, RefreshCcw, Search } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import StoreModal from "../../components/admin/StoreModal";
 import StoreInventoryModal from "../../components/admin/StoreInventoryModal";
@@ -111,32 +111,40 @@ const StoreManagement = () => {
   const currentPageData = filteredStores.slice(startIndex, endIndex);
 
   return (
-    <div >
+    <div className="p-6" >
       <Toaster position="top-right" reverseOrder={false} />
 
       {/* Main content */}
-      <div className="flex-1">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
-          <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 flex items-center gap-2">
-            <Store className="text-indigo-600" /> Quản lý cửa hàng
+      <div >
+        {/* --- Header --- */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 md:gap-0">
+          {/* Tiêu đề */}
+          <h2 className="flex items-center gap-3 text-3xl font-extrabold text-blue-600">
+            <Store className="w-8 h-8 text-blue-600" strokeWidth={2.5} />
+            Quản lý Cửa hàng
           </h2>
 
-          <div className="flex flex-wrap gap-2 items-center">
+          {/* Search, Filter & Buttons */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full md:w-auto">
             {/* Search */}
-            <input
-              type="text"
-              placeholder="Tìm kiếm cửa hàng..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+              <input
+                type="text"
+                placeholder="Tìm kiếm cửa hàng..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+              />
+              <div className="px-3 text-gray-400 border-l border-gray-200">
+                <Search size={20} />
+              </div>
+            </div>
 
             {/* Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition w-full sm:w-auto"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -146,23 +154,25 @@ const StoreManagement = () => {
             {/* Buttons */}
             <button
               onClick={fetchStores}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium w-full sm:w-auto"
             >
-              <RefreshCcw size={16} /> Làm mới
+              <RefreshCcw className="w-4 h-4" /> Làm mới
             </button>
+
             <button
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition font-medium"
               onClick={handleAddNew}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium rounded-xl shadow-lg hover:from-indigo-700 hover:to-indigo-600 transition w-full sm:w-auto"
             >
-              <PlusCircle size={18} /> Thêm cửa hàng
+              <PlusCircle className="w-5 h-5" /> Thêm cửa hàng
             </button>
           </div>
         </div>
 
+
         {/* Table */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           <table className="min-w-full text-sm">
-            <thead className="bg-indigo-50 text-indigo-700 text-left">
+            <thead className="bg-indigo-50 text-blue-600 text-left">
               <tr>
                 {[
                   "#",

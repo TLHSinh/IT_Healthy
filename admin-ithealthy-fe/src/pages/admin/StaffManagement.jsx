@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { PlusCircle, EyeIcon, Edit3, Trash2, User, Edit2 } from "lucide-react";
+import { PlusCircle, EyeIcon, Trash2, Users, Edit2, Search } from "lucide-react";
 import StaffModal from "../../components/admin/StaffModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
@@ -143,60 +143,74 @@ const StaffManagement = () => {
   }, [searchText, filterStore, filterRole, filterStatus]);
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-indigo-700 flex items-center gap-3">
-          <User className="text-indigo-600" /> Quản lý Nhân viên
+    <div className="p-6" >
+      {/* --- Header --- */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 md:gap-0">
+        {/* Tiêu đề */}
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-indigo-600">
+          <Users className="w-8 h-8 text-indigo-600" strokeWidth={2.5} />
+          Quản lý Nhân viên
         </h2>
-      </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
-        <input
-          type="text"
-          placeholder="Tìm theo tên, email, điện thoại..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          className="px-3 py-2 border rounded-lg shadow-sm w-full sm:w-64"
-        />
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={filterStore}
-            onChange={e => setFilterStore(e.target.value)}
-            className="px-3 py-2 border rounded-lg shadow-sm"
-          >
-            <option value="">Tất cả cửa hàng</option>
-            {stores.map(store => (
-              <option key={store.storeId} value={store.storeId}>{store.storeName}</option>
-            ))}
-          </select>
-          <select
-            value={filterRole}
-            onChange={e => setFilterRole(e.target.value)}
-            className="px-3 py-2 border rounded-lg shadow-sm"
-          >
-            <option value="">Tất cả vai trò</option>
-            {Array.from(new Set(staffs.map(s => s.roleStaff))).map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-lg shadow-sm"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="active">Đang làm</option>
-            <option value="inactive">Nghỉ việc</option>
-          </select>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-3 w-full md:w-auto">
+          {/* Ô tìm kiếm */}
+          <div className="flex items-center w-full sm:w-72 bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden focus-within:ring-2 focus-within:ring-indigo-300 transition">
+            <input
+              type="text"
+              placeholder="Tìm theo tên, email, điện thoại..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
+            />
+            <div className="px-3 text-gray-400 border-l border-gray-200">
+              <Search size={20} />
+            </div>
+          </div>
 
-          <button
-          onClick={() => openModal("create")}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-        >
-          <PlusCircle size={20}/> Thêm nhân viên
-        </button>
+          {/* Bộ lọc */}
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <select
+              value={filterStore}
+              onChange={e => setFilterStore(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <option value="">Tất cả cửa hàng</option>
+              {stores.map(store => (
+                <option key={store.storeId} value={store.storeId}>{store.storeName}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterRole}
+              onChange={e => setFilterRole(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <option value="">Tất cả vai trò</option>
+              {Array.from(new Set(staffs.map(s => s.roleStaff))).map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang làm</option>
+              <option value="inactive">Nghỉ việc</option>
+            </select>
+
+            {/* Nút thêm nhân viên */}
+            <button
+              onClick={() => openModal("create")}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium rounded-xl shadow-lg hover:from-indigo-700 hover:to-indigo-600 transition w-full sm:w-auto"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Thêm nhân viên
+            </button>
+          </div>
         </div>
       </div>
 

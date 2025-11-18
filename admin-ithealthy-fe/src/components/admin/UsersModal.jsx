@@ -97,7 +97,7 @@ const UsersModal = ({ isOpen, onClose, user, onSave, isCreate, isView }) => {
       <div className="bg-white w-full max-w-lg p-6 rounded-2xl relative shadow-2xl border border-gray-200 animate-fadeIn">
         {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
-          <h3 className="text-xl font-semibold flex items-center gap-2 text-indigo-700">
+          <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-700">
             {isCreate ? (
               <>
                 <UserPlus size={20} /> Thêm Người dùng

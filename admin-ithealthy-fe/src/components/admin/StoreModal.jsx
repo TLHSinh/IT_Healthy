@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { adminApi } from "../../api/adminApi";
-import { toast } from "react-toastify"; // ✅ dùng react-toastify thay vì react-hot-toast
+import { toast } from "react-toastify";
 import { XCircle } from "lucide-react";
 
 const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
@@ -20,7 +20,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // ✅ Reset form khi đóng modal
   const resetForm = () => {
     setForm({
       storeName: "",
@@ -37,7 +36,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     });
   };
 
-  // ✅ Cập nhật form khi mở modal
   useEffect(() => {
     if (store) {
       setForm({
@@ -58,7 +56,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     }
   }, [store]);
 
-  // ✅ Bắt sự kiện thay đổi input
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -67,7 +64,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
     }));
   };
 
-  // ✅ Gửi form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -86,7 +82,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
       if (store) {
         const storeId = store?.storeId ?? store?.StoreId;
         if (!storeId) throw new Error("Không tìm thấy ID cửa hàng để cập nhật!");
-
         await adminApi.updateStore(storeId, dataToSend);
         toast.success("Cập nhật cửa hàng thành công!");
       } else {
@@ -94,7 +89,6 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
         toast.success("Thêm cửa hàng mới thành công!");
       }
 
-      // ⏳ Delay nhẹ để toast hiển thị trước khi đóng modal
       setTimeout(() => {
         refreshList();
         resetForm();
@@ -115,8 +109,8 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 relative animate-slideUp border border-gray-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
-          <h3 className="text-lg font-semibold text-gray-800">
-            {store ? "Chỉnh sửa cửa hàng" : "Thêm cửa hàng mới"}
+          <h3 className="text-lg font-bold text-gray-800">
+            {store ? "✏️ Chỉnh sửa cửa hàng" : "➕ Thêm cửa hàng mới"}
           </h3>
           <button
             onClick={() => {
@@ -148,18 +142,21 @@ const StoreModal = ({ isOpen, setIsOpen, store, refreshList }) => {
             { name: "latitude", placeholder: "Vĩ độ (Latitude)" },
             { name: "longitude", placeholder: "Kinh độ (Longitude)" },
           ].map((f) => (
-            <input
-              key={f.name}
-              name={f.name}
-              placeholder={f.placeholder}
-              value={form[f.name]}
-              onChange={handleChange}
-              required={f.required}
-              disabled={loading}
-              className={`border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none ${
-                f.colSpan === 2 ? "col-span-2" : ""
-              }`}
-            />
+            <div key={f.name} className={`${f.colSpan === 2 ? "col-span-2" : ""}`}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {f.placeholder}
+                {f.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <input
+                name={f.name}
+                placeholder={f.placeholder}
+                value={form[f.name]}
+                onChange={handleChange}
+                required={f.required}
+                disabled={loading}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+              />
+            </div>
           ))}
 
           {/* Checkbox */}
