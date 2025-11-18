@@ -30,7 +30,9 @@ const IngredientManagement = () => {
   const fetchIngredients = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/ingredient");
+      const res = await axios.get(
+        "http://localhost:5000/api/ingredient/all-ingredients"
+      );
       setIngredients(res.data || []);
     } catch (err) {
       console.error(err);
