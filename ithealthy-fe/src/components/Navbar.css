@@ -297,7 +297,7 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
   .navbar-main {
-    padding: 16px 30px;
+    padding: 10px 30px;
   }
 
   .nav-menu {
@@ -684,7 +684,7 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
   .navbar-main {
-    padding: 16px 30px;
+    padding: 10px 30px;
   }
 
   .nav-menu {
