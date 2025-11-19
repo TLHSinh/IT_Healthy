@@ -118,7 +118,18 @@ const VouchersManagement = () => {
   const currentData = filteredVouchers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => setPage(1), [storeFilter, productFilter, categoryFilter]);
-
+const getDiscountColor = (type) => {
+    switch (type) {
+      case "percent":
+        return "bg-orange-500"; // cam
+      case "FreeShipping":
+        return "bg-green-500"; // xanh lá
+      case "fixed":
+        return "bg-pink-500"; // hồng
+      default:
+        return "bg-gray-500";
+    }
+  };
   return (
     <div className="p-6">
       {/* --- Header --- */}
@@ -216,6 +227,7 @@ const VouchersManagement = () => {
           </tbody>
         </table>
       </div> */}
+      
       {/* Table */}
 <div className="overflow-auto border rounded-xl shadow relative">
   {loading && (
@@ -245,8 +257,12 @@ const VouchersManagement = () => {
             <td className="px-3 py-2 font-medium text-indigo-700">{v.code}</td>
             <td className="px-3 py-2 truncate max-w-[120px]" title={v.descriptionVou}>{v.descriptionVou}</td>
             <td className="px-3 py-2">
-              <span className="px-2 py-0.5 rounded bg-indigo-500 text-white text-xs capitalize">{v.discountType}</span>
-            </td>
+  <span
+    className={`px-2 py-0.5 rounded text-white text-xs capitalize ${getDiscountColor(v.discountType)}`}
+  >
+    {v.discountType}
+  </span>
+</td>
             <td className="px-3 py-2 font-semibold text-green-600">{v.discountValue}</td>
             <td className="px-3 py-2">{v.startDate}</td>
             <td className="px-3 py-2">{v.expiryDate}</td>

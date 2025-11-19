@@ -1,207 +1,338 @@
-import React, { useState, useEffect } from "react";
+// BowlPage.jsx
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useContext,
+} from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCcw, List, Grid, Search } from "lucide-react";
+import {
+  List,
+  Grid,
+  Search,
+  X,
+  Printer,
+  RefreshCcw,
+  User,
+  Calendar,
+  MapPin,
+} from "lucide-react";
+import { AuthContext } from "../context/AuthContext";
+/* ----------------------------- Helpers ----------------------------- */
+const fmtCurrency = (v) => {
+  const n = Number(v);
+  if (Number.isNaN(n)) return "0";
+  return n.toLocaleString("vi-VN");
+};
 
-const PAGE_SIZE = 8;
+const safeDate = (d) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt)) return "—";
+  return dt.toLocaleString();
+};
 
-const UserBowlPage = () => {
+/* ----------------------------- Skeleton ----------------------------- */
+const SkeletonRow = () => (
+  <tr className="animate-pulse">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <td key={i} className="py-4 px-4">
+        <div className="h-4 bg-gray-200 rounded w-full" />
+      </td>
+    ))}
+  </tr>
+);
+
+/* ----------------------------- Modal ----------------------------- */
+const BowlModal = ({ bowl, onClose, printRef }) => {
+  if (!bowl) return null;
+
+  return (
+    <AnimatePresence>
+      {bowl && (
+        <motion.div
+          key="modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        >
+          <motion.div
+            ref={printRef}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white w-full max-w-3xl rounded-2xl shadow-xl relative overflow-y-auto max-h-[90vh]"
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-2xl font-bold">{bowl.bowlName}</h2>
+              <button onClick={onClose}>
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              <div className="flex justify-between text-gray-700">
+                <div>Tổng giá:</div>
+                <div className="font-semibold">
+                  {fmtCurrency(bowl.totalPrice)}₫
+                </div>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <div>Calories:</div>
+                <div className="font-semibold">{bowl.baseCalories}</div>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <div>Protein:</div>
+                <div className="font-semibold">{bowl.totalProtein}g</div>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <div>Carbs:</div>
+                <div className="font-semibold">{bowl.totalCarbs}g</div>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <div>Fat:</div>
+                <div className="font-semibold">{bowl.totalFat}g</div>
+              </div>
+
+              {/* Ingredients */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Nguyên liệu</h3>
+                <div className="rounded-xl border overflow-hidden shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100 font-medium">
+                      <tr>
+                        <th className="py-2 px-4">#</th>
+                        <th className="py-2 px-4 text-left">Tên nguyên liệu</th>
+                        <th className="py-2 px-4 text-center">SL</th>
+                        <th className="py-2 px-4 text-right">Giá</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bowl.ingredients.map((ing, i) => (
+                        <tr
+                          key={i}
+                          className="border-b hover:bg-gray-50 transition"
+                        >
+                          <td className="py-2 px-4 text-center">{i + 1}</td>
+                          <td className="py-2 px-4">{ing.ingredientName}</td>
+                          <td className="py-2 px-4 text-center">
+                            {ing.quantity}
+                          </td>
+                          <td className="py-2 px-4 text-right">
+                            {fmtCurrency(ing.price)}₫
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/* ----------------------------- Main Component ----------------------------- */
+const BowlPage = () => {
   const [bowls, setBowls] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("table"); // "table" | "card"
+  const [viewMode, setViewMode] = useState("table");
+  const [selectedBowl, setSelectedBowl] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
+  const printRef = useRef(null);
+  const [adding, setAdding] = useState(false);
+  const { user } = useContext(AuthContext);
 
-  const fetchBowls = async () => {
+  /* Fetch bowls */
+  const fetchBowls = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/bowl/user/1");
-      setBowls(res.data); // giả sử trả về mảng bowl
+      const res = await axios.get(
+        `http://localhost:5000/api/bowl/user/${user.customerId}`
+      );
+      setBowls(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      toast.error("Lấy dữ liệu Bowl thất bại");
+      console.error(err);
+      toast.error("Lấy dữ liệu bowl thất bại");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchBowls();
+  }, [fetchBowls]);
+
+  const filtered = useMemo(() => {
+    if (!searchTerm) return bowls;
+    return bowls.filter((b) =>
+      b.bowlName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [bowls, searchTerm]);
+
+  const handlePrint = useCallback(() => {
+    if (!printRef.current) return;
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
+    w.document.write(
+      `<html><head><title>In Bowl</title></head><body>${printRef.current.innerHTML}</body></html>`
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      w.print();
+      try {
+        w.close();
+      } catch (e) {}
+    }, 300);
   }, []);
 
-  if (loading)
-    return (
-      <p className="text-center mt-10 text-gray-500 animate-pulse text-lg font-semibold">
-        Đang tải dữ liệu...
-      </p>
-    );
+  const handleAddToCart = async (bowl) => {
+    if (!bowl) return;
 
-  // 🔹 Filter theo search term
-  const filteredBowls = bowls.filter((bowl) =>
-    bowl.bowlName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // 🔹 Pagination
-  const totalPages = Math.ceil(filteredBowls.length / PAGE_SIZE);
-  const startIndex = (page - 1) * PAGE_SIZE;
-  const endIndex = startIndex + PAGE_SIZE;
-  const currentPageData = filteredBowls.slice(startIndex, endIndex);
-
-  const Pagination = () => (
-    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3 text-sm">
-      <div className="text-gray-600 font-medium">
-        Hiển thị{" "}
-        <span className="text-indigo-600 font-bold">
-          {filteredBowls.length === 0
-            ? 0
-            : Math.min(filteredBowls.length, page * PAGE_SIZE)}
-        </span>{" "}
-        / {filteredBowls.length} bowl
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setPage(1)}
-          disabled={page === 1 || totalPages === 0}
-          className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          « Đầu
-        </button>
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1 || totalPages === 0}
-          className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          ← Trước
-        </button>
-        <span className="px-3 py-1.5 rounded-full border border-blue-300 bg-blue-50 text-blue-700 font-semibold shadow-sm">
-          {totalPages === 0 ? 0 : page} / {totalPages}
-        </span>
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages || totalPages === 0}
-          className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Sau →
-        </button>
-        <button
-          onClick={() => setPage(totalPages)}
-          disabled={page === totalPages || totalPages === 0}
-          className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cuối »
-        </button>
-      </div>
-    </div>
-  );
+    try {
+      await axios.post(
+        `http://localhost:5000/api/bowl/clone-to-cart/${bowl.bowlId}?customerId=${user.customerId}`
+      );
+      toast.success(`${bowl.bowlName} đã được thêm vào giỏ hàng!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Thêm vào giỏ hàng thất bại");
+    }
+  };
 
   return (
-    <div className="p-6 bg-[#F8F4E9] min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
-        <h2 className="text-3xl font-extrabold text-blue-600">Bowl của bạn</h2>
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <div className="flex items-center w-full sm:w-64 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-300 transition">
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800">
+            Bowl của tôi
+          </h1>
+          <p className="text-sm text-gray-500">Quản lý bowl</p>
+        </div>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center w-full sm:w-80 bg-white border rounded-2xl shadow-sm overflow-hidden">
             <input
-              type="text"
-              placeholder="Tìm kiếm bowl..."
-              className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 w-full outline-none bg-transparent text-sm"
+              placeholder="Tìm tên bowl..."
             />
-            <div className="px-3 text-gray-400 border-l border-gray-200">
-              <Search size={20} />
+            <div className="px-3 text-gray-500">
+              <Search size={18} />
             </div>
           </div>
-
           <button
             onClick={fetchBowls}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+            className="ml-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:shadow-md flex items-center gap-2"
+            title="Làm mới"
           >
-            <RefreshCcw className="w-4 h-4" /> Làm mới
+            <RefreshCcw className="w-4 h-4" />
+            <span className="text-sm">Làm mới</span>
           </button>
-
-          <div className="flex gap-2 border rounded-full overflow-hidden">
+          <div className="ml-2 flex items-center gap-2 border rounded-full overflow-hidden">
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center justify-center px-3 py-2 transition rounded-full ${
-                viewMode === "table"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              className={`px-3 py-2 ${
+                viewMode === "table" ? "bg-blue-600 text-white" : "bg-white"
               }`}
-              title="Table view"
             >
-              <List className="w-5 h-5" />
+              <List size={18} />
             </button>
             <button
               onClick={() => setViewMode("card")}
-              className={`flex items-center justify-center px-3 py-2 transition rounded-full ${
-                viewMode === "card"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              className={`px-3 py-2 ${
+                viewMode === "card" ? "bg-blue-600 text-white" : "bg-white"
               }`}
-              title="Card view"
             >
-              <Grid className="w-5 h-5" />
+              <Grid size={18} />
             </button>
           </div>
         </div>
       </div>
 
+      {/* Content */}
       <AnimatePresence mode="wait">
-        {viewMode === "table" ? (
+        {loading ? (
+          <motion.div
+            key="loading"
+            className="overflow-x-auto bg-white rounded-2xl shadow p-4"
+          >
+            <table className="min-w-full">
+              <tbody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <SkeletonRow key={i} />
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+        ) : viewMode === "table" ? (
           <motion.div
             key="table"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-x-auto shadow-md rounded-lg"
+            className="overflow-x-auto bg-white rounded-2xl shadow p-2"
           >
-            <table className="min-w-full bg-[#fff8f0] rounded-lg overflow-hidden">
-              <thead className="bg-blue-200 text-gray-700 uppercase text-sm sticky top-0">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-100 font-medium">
                 <tr>
-                  <th className="py-3 px-4 text-left">Bowl ID</th>
-                  <th className="py-3 px-4 text-left">Tên Bowl</th>
-                  <th className="py-3 px-4 text-left">Giá</th>
-                  <th className="py-3 px-4 text-left">Calories</th>
-                  <th className="py-3 px-4 text-left">Protein</th>
-                  <th className="py-3 px-4 text-left">Ingredients</th>
-                  <th className="py-3 px-4 text-left">Ngày tạo</th>
+                  <th className="py-2 px-3">#</th>
+                  <th className="py-2 px-3 text-left">Tên Bowl</th>
+                  <th className="py-2 px-3">Giá trị</th>
+                  <th className="py-2 px-3">Ngày tạo</th>
+                  <th className="py-2 px-3">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {currentPageData.length === 0 ? (
+                {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="p-6 text-center text-gray-500">
-                      Không có bowl.
+                    <td colSpan={5} className="text-center p-4 text-gray-500">
+                      Không có bowl nào.
                     </td>
                   </tr>
                 ) : (
-                  currentPageData.map((bowl) => (
+                  filtered.map((b, i) => (
                     <tr
-                      key={bowl.bowlId}
-                      className="border-b hover:bg-gray-50 transition-colors duration-200"
+                      key={b.bowlId}
+                      className="border-b hover:bg-gray-50 transition"
                     >
-                      <td className="py-3 px-4 font-medium">{bowl.bowlId}</td>
-                      <td className="py-3 px-4">{bowl.bowlName}</td>
-                      <td className="py-3 px-4">
-                        {bowl.totalPrice.toLocaleString()}₫
+                      <td className="py-2 px-3 text-center">{i + 1}</td>
+                      <td className="py-2 px-3">{b.bowlName}</td>
+                      <td className="py-2 px-3 text-right font-semibold">
+                        {fmtCurrency(b.totalPrice)}₫
                       </td>
-                      <td className="py-3 px-4">{bowl.baseCalories}</td>
-                      <td className="py-3 px-4">{bowl.totalProtein}</td>
-                      <td className="py-3 px-4">
-                        {bowl.ingredients.map((i) => (
-                          <div key={i.ingredientId}>
-                            {i.ingredientName} x{i.quantity} (
-                            {i.price.toLocaleString()}₫)
-                          </div>
-                        ))}
-                      </td>
-                      <td className="py-3 px-4">
-                        {new Date(bowl.createdAt).toLocaleString()}
+                      <td className="py-2 px-3">{safeDate(b.createdAt)}</td>
+                      <td className="py-2 px-3 flex gap-2">
+                        <button
+                          onClick={() => handleAddToCart(b)}
+                          className="px-3 py-1 bg-green-600 text-white rounded-full text-sm"
+                        >
+                          Thêm vào giỏ
+                        </button>
+                        <button
+                          onClick={() => setSelectedBowl(b)}
+                          className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm"
+                        >
+                          Xem
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedBowl(b);
+                            setTimeout(handlePrint, 200);
+                          }}
+                          className="px-2 py-1 bg-white border rounded-full text-sm"
+                        >
+                          <Printer size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -212,54 +343,67 @@ const UserBowlPage = () => {
         ) : (
           <motion.div
             key="card"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {currentPageData.map((bowl) => (
-              <motion.div
-                key={bowl.bowlId}
-                layout
-                className="bg-[#fff8f0] rounded-xl shadow-lg p-5 transition-transform transform hover:-translate-y-2 hover:shadow-2xl"
-              >
-                <h3 className="font-bold text-lg text-gray-800 mb-2">
-                  {bowl.bowlName}
-                </h3>
-                <p className="text-gray-700 mb-1">
-                  Giá: {bowl.totalPrice.toLocaleString()}₫
-                </p>
-                <p className="text-gray-700 mb-1">
-                  Calories: {bowl.baseCalories}
-                </p>
-                <p className="text-gray-700 mb-2">
-                  Protein: {bowl.totalProtein}
-                </p>
-                <div className="text-gray-700 mb-2">
-                  <span className="font-medium">Ingredients:</span>
-                  <ul className="list-disc ml-5">
-                    {bowl.ingredients.map((i) => (
-                      <li key={i.ingredientId}>
-                        {i.ingredientName} x{i.quantity} (
-                        {i.price.toLocaleString()}₫)
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="text-gray-500 text-sm">
-                  Ngày tạo: {new Date(bowl.createdAt).toLocaleString()}
-                </p>
-              </motion.div>
-            ))}
+            {filtered.length === 0 ? (
+              <div className="col-span-full p-6 text-center bg-white rounded-2xl shadow text-gray-500">
+                Không có bowl nào.
+              </div>
+            ) : (
+              filtered.map((b, i) => (
+                <motion.div
+                  key={b.bowlId}
+                  whileHover={{ y: -4 }}
+                  className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100"
+                >
+                  <div className="text-lg font-bold">{b.bowlName}</div>
+                  <div className="text-gray-700 mt-1">
+                    Giá trị:{" "}
+                    <span className="font-semibold">
+                      {fmtCurrency(b.totalPrice)}₫
+                    </span>
+                  </div>
+                  <div className="text-gray-500 text-sm mt-1">
+                    Ngày tạo: {safeDate(b.createdAt)}
+                  </div>
+                  <div className="flex justify-between mt-4">
+                    <button
+                      onClick={() => handleAddToCart(b)}
+                      className="px-3 py-1 bg-green-600 text-white rounded-full text-sm"
+                    >
+                      Thêm vào giỏ
+                    </button>
+                    <button
+                      onClick={() => setSelectedBowl(b)}
+                      className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm"
+                    >
+                      Xem
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedBowl(b);
+                        setTimeout(handlePrint, 200);
+                      }}
+                      className="px-2 py-1 bg-white border rounded-full text-sm"
+                    >
+                      <Printer size={16} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Pagination */}
-      {totalPages > 0 && <Pagination />}
+      {/* Modal */}
+      <BowlModal
+        bowl={selectedBowl}
+        onClose={() => setSelectedBowl(null)}
+        printRef={printRef}
+      />
     </div>
   );
 };
 
-export default UserBowlPage;
+export default BowlPage;

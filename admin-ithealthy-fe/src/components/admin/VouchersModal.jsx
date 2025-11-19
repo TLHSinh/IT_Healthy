@@ -124,14 +124,30 @@ const VouchersModal = ({ close, refresh, editData, stores, products, categories 
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex justify-between items-center bg-indigo-500 text-white px-8 py-6 sticky top-0 z-10">
-          <h2 className="text-3xl font-bold tracking-wide">
+        <div
+          className="
+            p-6
+            bg-white 
+            text-gray-800
+            rounded-t-3xl
+            flex justify-between items-center
+            shadow-md
+            border-b
+          "
+        >
+          <h2 className="text-2xl font-bold tracking-wide flex items-center gap-2">
             {editData ? "Cập nhật Voucher" : "Tạo Voucher Mới"}
           </h2>
-          <button onClick={close} className="p-2 hover:bg-white/30 rounded-full transition">
-            <FaTimes size={24} />
+
+          <button
+            onClick={close}
+            className="text-gray-700 hover:text-black transition"
+          >
+            <FaTimes className="w-7 h-7" />
           </button>
         </div>
+
+
 
         {/* Nội dung cuộn */}
         <div className="max-h-[75vh] overflow-y-auto px-10 py-8 space-y-6">
@@ -244,6 +260,22 @@ const VouchersModal = ({ close, refresh, editData, stores, products, categories 
                 />
               </div>
             </div>
+
+  
+            {/* Giới hạn mỗi khách */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="font-semibold">Giới hạn mỗi khách (perCustomerLimit)</label>
+                <input
+                  type="number"
+                  value={form.perCustomerLimit}
+                  onChange={(e) => setForm({ ...form, perCustomerLimit: Number(e.target.value) })}
+                  className="w-full p-3 mt-2 rounded-xl border focus:ring-2 focus:ring-orange-400 outline-none"
+                  placeholder="VD: 1"
+                />
+              </div>
+            </div>
+
 
             {/* Trạng thái */}
             <div className="flex gap-10 mt-2">

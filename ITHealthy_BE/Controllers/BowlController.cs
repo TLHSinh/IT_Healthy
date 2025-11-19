@@ -140,7 +140,7 @@ namespace ITHealthy.Controllers
             }));
         }
 
-
+        //http://localhost:5000/api/bowl/clone-to-cart/3?customerId=1
         [HttpPut("update/{bowlId}")]
         public async Task<IActionResult> UpdateBowl(int bowlId, [FromBody] CreateBowlRequest request)
         {
