@@ -19,6 +19,18 @@ namespace ITHealthy.DTOs
         public string? FullName { get; set; }
         public string? StoreName { get; set; }
 
+        public string StreetAddress { get; set; } = null!;
+
+        public string? Ward { get; set; }
+
+        public string? District { get; set; }
+
+        public string? City { get; set; }
+
+        public string? Country { get; set; } = "Việt Nam";
+
+        public string? Postcode { get; set; }
+
         // Các item trong đơn hàng
         public List<OrderItemDTO> OrderItems { get; set; } = new();
     }

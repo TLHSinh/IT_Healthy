@@ -44,6 +44,13 @@ namespace ITHealthy.Controllers
                     OrderNote = o.OrderNote,
                     FullName = o.Customer != null ? o.Customer.FullName : null,
                     StoreName = o.Store != null ? o.Store.StoreName : null,
+                    StreetAddress = o.Store != null ? o.Store.StreetAddress : null,
+                    Ward = o.Store != null ? o.Store.Ward : null,
+                    District = o.Store != null ? o.Store.District : null,
+                    City = o.Store != null ? o.Store.City : null,
+                    Country = o.Store != null ? o.Store.Country : null,
+                    Postcode = o.Store != null ? o.Store.Postcode : null,
+
 
                     OrderItems = o.OrderItems.Select(oi => new OrderItemDTO
                     {
@@ -72,17 +79,33 @@ namespace ITHealthy.Controllers
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
-                .Where(o => o.CustomerId == customerId)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Combo)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Bowl)
+                .Include(o => o.Customer)
+                .Include(o => o.Store)
                 .Select(o => new OrderDTO
                 {
                     OrderId = o.OrderId,
                     CustomerId = o.CustomerId,
+                    StoreId = o.StoreId,
                     OrderDate = o.OrderDate,
                     FinalPrice = o.FinalPrice,
                     StatusOrder = o.StatusOrder,
                     OrderType = o.OrderType,
+                    OrderNote = o.OrderNote,
+                    FullName = o.Customer != null ? o.Customer.FullName : null,
+                    StoreName = o.Store != null ? o.Store.StoreName : null,
+                    StreetAddress = o.Store != null ? o.Store.StreetAddress : null,
+                    Ward = o.Store != null ? o.Store.Ward : null,
+                    District = o.Store != null ? o.Store.District : null,
+                    City = o.Store != null ? o.Store.City : null,
+                    Country = o.Store != null ? o.Store.Country : null,
+                    Postcode = o.Store != null ? o.Store.Postcode : null,
+
 
                     OrderItems = o.OrderItems.Select(oi => new OrderItemDTO
                     {
@@ -143,6 +166,12 @@ namespace ITHealthy.Controllers
                     OrderNote = o.OrderNote,
                     FullName = o.Customer != null ? o.Customer.FullName : null,
                     StoreName = o.Store != null ? o.Store.StoreName : null,
+                    StreetAddress = o.Store != null ? o.Store.StreetAddress : null,
+                    Ward = o.Store != null ? o.Store.Ward : null,
+                    District = o.Store != null ? o.Store.District : null,
+                    City = o.Store != null ? o.Store.City : null,
+                    Country = o.Store != null ? o.Store.Country : null,
+                    Postcode = o.Store != null ? o.Store.Postcode : null,
 
                     OrderItems = o.OrderItems.Select(oi => new OrderItemDTO
                     {
@@ -191,6 +220,12 @@ namespace ITHealthy.Controllers
                      OrderNote = o.OrderNote,
                      FullName = o.Customer != null ? o.Customer.FullName : null,
                      StoreName = o.Store != null ? o.Store.StoreName : null,
+                     StreetAddress = o.Store != null ? o.Store.StreetAddress : null,
+                     Ward = o.Store != null ? o.Store.Ward : null,
+                     District = o.Store != null ? o.Store.District : null,
+                     City = o.Store != null ? o.Store.City : null,
+                     Country = o.Store != null ? o.Store.Country : null,
+                     Postcode = o.Store != null ? o.Store.Postcode : null,
 
                      OrderItems = o.OrderItems.Select(oi => new OrderItemDTO
                      {

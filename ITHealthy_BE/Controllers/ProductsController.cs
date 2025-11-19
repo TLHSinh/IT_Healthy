@@ -35,6 +35,7 @@ namespace ITHealthy.Controllers
                     DescriptionProduct = p.DescriptionProduct,
                     ImageProduct = p.ImageProduct,
                     CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    CategoryId = p.CategoryId,
                     Calories = p.Calories,
                     Protein = p.Protein,
                     Carbs = p.Carbs,
