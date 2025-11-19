@@ -184,7 +184,7 @@ export default function CartPage() {
           Vui lòng đăng nhập để xem giỏ hàng
         </p>
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => navigate("/login-user")}
           className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
         >
           Đăng nhập ngay
@@ -209,7 +209,7 @@ export default function CartPage() {
           Giỏ hàng của bạn đang trống
         </p>
         <button
-          onClick={() => navigate("/products")}
+          onClick={() => navigate("/signature-bowls")}
           className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
         >
           Khám phá sản phẩm

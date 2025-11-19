@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import { useOutletContext } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function CreateYourBowlPage() {
   const { submenuOpen } = useOutletContext(); // 🟢 nhận từ MainLayout
@@ -7,6 +9,10 @@ export default function CreateYourBowlPage() {
   const [ingredients, setIngredients] = useState([]);
   const [selectedCounts, setSelectedCounts] = useState({});
   const sectionRefs = useRef({}); // Lưu ref từng category
+  const [showPopup, setShowPopup] = useState(false);
+  const [bowlName, setBowlName] = useState("");
+  const [toast, setToast] = useState({ show: false, message: "" });
+  const { user } = useContext(AuthContext);
 
   // ===== Lấy danh mục category =====
   useEffect(() => {
@@ -45,6 +51,63 @@ export default function CreateYourBowlPage() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Hàm tiện ích hiển thị toast 3 giây
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: "" }), 3000);
+  };
+
+  const handleCreateBowl = async () => {
+    if (!bowlName.trim()) {
+      showToast("Vui lòng nhập tên bowl!");
+      return;
+    }
+
+    const selectedIngredients = ingredients
+      .filter((i) => selectedCounts[i.ingredientId] > 0)
+      .map((i) => ({
+        ingredientId: i.ingredientId,
+        quantity: selectedCounts[i.ingredientId],
+      }));
+
+    if (selectedIngredients.length === 0) {
+      showToast("Bạn chưa chọn nguyên liệu nào!");
+      return;
+    }
+
+    const payload = {
+      customerId: user.customerId,
+      bowlName,
+      ingredients: selectedIngredients,
+    };
+
+    try {
+      const res = await fetch("http://localhost:5000/api/bowl/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showToast("Lỗi tạo bowl: " + (data.message || "Unknown error"));
+        return;
+      }
+
+      // Thành công
+      showToast(`Tạo bowl ${bowlName} thành công! `);
+
+      // Reset form & chọn nguyên liệu
+      setBowlName("");
+      setShowPopup(false);
+      setSelectedCounts({});
+    } catch (err) {
+      console.error(err);
+      showToast("Tạo bowl không thành công!");
+    }
+  };
+
   return (
     <div className="flex bg-[#FAF4E1] min-h-screen gap-6 px-6">
       {/* ===== Bên trái - danh sách nguyên liệu (70%) ===== */}
@@ -55,7 +118,12 @@ export default function CreateYourBowlPage() {
             submenuOpen ? "top-36" : "top-20"
           }`}
         >
-          <div className="flex justify-center p-2">
+          {toast.show && (
+            <div className="fixed bottom-5 right-5 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg animate-slide-in">
+              {toast.message}
+            </div>
+          )}
+          <div className="flex justify-center p-8 ">
             <div className="flex items-center gap-8 bg-green-200 rounded-full px-2 py-1 shadow-md">
               {categories.map((cat) => (
                 <button
@@ -71,7 +139,7 @@ export default function CreateYourBowlPage() {
         </div>
 
         {/* Danh sách nguyên liệu */}
-        <div className="p-8 space-y-10 pt-40">
+        <div className="p-8 space-y-10 pt-24">
           {Object.entries(grouped).map(([category, items], index) => (
             <div
               key={category}
@@ -131,7 +199,7 @@ export default function CreateYourBowlPage() {
       </div>
 
       {/* ===== Bên phải - tóm tắt (luôn cố định khi cuộn) ===== */}
-      <div className="w-3/10 sticky top-24 bg-[#FFF8EC] rounded-2xl shadow-md p-4 overflow-y-auto max-h-[85vh]">
+      <div className="w-3/10 sticky top-36 bg-[#FFF8EC] rounded-2xl shadow-md p-4 overflow-y-auto max-h-[79vh]">
         <h2 className="text-lg font-bold text-center mb-1 text-[#5A2E00]">
           Tô healthy của bạn
         </h2>
@@ -246,6 +314,167 @@ export default function CreateYourBowlPage() {
             <div>FAT</div>
           </div>
         </div>
+        {/* Nút tạo bowl */}
+        {Object.values(selectedCounts).some((v) => v > 0) && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => setShowPopup(true)}
+              className="px-5 py-2 bg-green-600 text-white rounded-xl shadow-md hover:bg-green-700"
+            >
+              Tạo Bowl
+            </button>
+          </div>
+        )}
+        {/* POPUP TẠO BOWL */}
+        {showPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
+            <div className="bg-white w-[400px] rounded-xl p-6 shadow-xl">
+              <h2 className="text-lg font-bold mb-3 text-[#5A2E00]">
+                Tạo Bowl
+              </h2>
+
+              <label className="text-sm font-semibold text-[#5A2E00]">
+                Tên bowl
+              </label>
+              <input
+                type="text"
+                value={bowlName}
+                onChange={(e) => setBowlName(e.target.value)}
+                placeholder="Nhập tên bowl..."
+                className="w-full border rounded-lg p-2 mt-1 mb-4"
+              />
+
+              {/* Danh sách nguyên liệu đã chọn */}
+              <div className="max-h-40 overflow-y-auto mb-3">
+                {ingredients
+                  .filter((i) => selectedCounts[i.ingredientId] > 0)
+                  .map((item) => (
+                    <div
+                      key={item.ingredientId}
+                      className="flex items-center gap-3 mb-2 bg-[#E6F6ED] rounded-xl p-2"
+                    >
+                      <img
+                        src={item.imageIngredients}
+                        alt={item.ingredientName}
+                        className="w-10 h-10 object-contain rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-[#5A2E00]">
+                          {item.ingredientName} ×{" "}
+                          {selectedCounts[item.ingredientId]}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Tổng calo */}
+              <div className="text-sm font-semibold text-[#5A2E00] mb-4">
+                Tổng calo:{" "}
+                {ingredients
+                  .reduce(
+                    (sum, i) =>
+                      sum +
+                      (i.calories || 0) * (selectedCounts[i.ingredientId] || 0),
+                    0
+                  )
+                  .toFixed(0)}{" "}
+                kcal
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="px-4 py-2 border rounded-xl"
+                >
+                  Hủy
+                </button>
+
+                <button
+                  onClick={() => handleCreateBowl()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+                >
+                  Xác nhận tạo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* POPUP TẠO BOWL */}
+        {showPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
+            <div className="bg-white w-[400px] rounded-xl p-6 shadow-xl">
+              <h2 className="text-lg font-bold mb-3 text-[#5A2E00]">
+                Tạo Bowl
+              </h2>
+
+              <label className="text-sm font-semibold text-[#5A2E00]">
+                Tên bowl
+              </label>
+              <input
+                type="text"
+                value={bowlName}
+                onChange={(e) => setBowlName(e.target.value)}
+                placeholder="Nhập tên bowl..."
+                className="w-full border rounded-lg p-2 mt-1 mb-4"
+              />
+
+              {/* Danh sách nguyên liệu đã chọn */}
+              <div className="max-h-40 overflow-y-auto mb-3">
+                {ingredients
+                  .filter((i) => selectedCounts[i.ingredientId] > 0)
+                  .map((item) => (
+                    <div
+                      key={item.ingredientId}
+                      className="flex items-center gap-3 mb-2 bg-[#E6F6ED] rounded-xl p-2"
+                    >
+                      <img
+                        src={item.imageIngredients}
+                        alt={item.ingredientName}
+                        className="w-10 h-10 object-contain rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-[#5A2E00]">
+                          {item.ingredientName} ×{" "}
+                          {selectedCounts[item.ingredientId]}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Tổng calo */}
+              <div className="text-sm font-semibold text-[#5A2E00] mb-4">
+                Tổng calo:{" "}
+                {ingredients
+                  .reduce(
+                    (sum, i) =>
+                      sum +
+                      (i.calories || 0) * (selectedCounts[i.ingredientId] || 0),
+                    0
+                  )
+                  .toFixed(0)}{" "}
+                kcal
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="px-4 py-2 border rounded-xl"
+                >
+                  Hủy
+                </button>
+
+                <button
+                  onClick={() => handleCreateBowl()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+                >
+                  Xác nhận tạo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

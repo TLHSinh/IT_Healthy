@@ -95,7 +95,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                 className={`nav-item ${
                   isActive("/signature-bowls") ||
                   isActive("/createyourbowl") ||
-                  isActive("/BowlPlanner")
+                  isActive("/UserBowlPage")
                     ? "active"
                     : ""
                 }`}
@@ -181,23 +181,41 @@ const Navbar = ({ onSubmenuToggle }) => {
               />
             </button>
 
-            {/* Đăng nhập / Đăng xuất */}
+            {/* Nếu đã đăng nhập thì hiển thị avatar + menu */}
             {user ? (
-              <button
-                className="auth-btn"
-                onClick={handleLogout}
-                title="Đăng xuất"
-              >
-                <LogOut
-                  size={22}
-                  color={isHomePage && !isScrolled ? "#ffffff" : "#00B389"}
+              <div className="user-menu-wrapper">
+                <img
+                  src={user.avatar || "/img/default-avatar.png"}
+                  alt="User Avatar"
+                  className="user-avatar"
+                  onClick={() =>
+                    setActiveMenu(activeMenu === "user" ? null : "user")
+                  }
                 />
-              </button>
+
+                {activeMenu === "user" && (
+                  <div className="user-dropdown">
+                    <p className="user-name">
+                      {user.fullname || user.username}
+                    </p>
+
+                    <button
+                      className="dropdown-item"
+                      onClick={() => navigate("/profile")}
+                    >
+                      <User size={18} /> Thông tin cá nhân
+                    </button>
+
+                    <button className="dropdown-item" onClick={handleLogout}>
+                      <LogOut size={18} /> Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 className="auth-btn"
                 onClick={() => navigate("/login-user")}
-                title="Đăng nhập"
               >
                 <CircleUserRound
                   size={28}
@@ -246,14 +264,14 @@ const Navbar = ({ onSubmenuToggle }) => {
               </li>
               <li
                 className={`submenu-item ${
-                  isActive("/BowlPlanner") ? "active" : ""
+                  isActive("/UserBowlPage") ? "active" : ""
                 }`}
               >
                 <a
                   href="/menu/plan-your-bowls"
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate("/BowlPlanner");
+                    navigate("/UserBowlPage");
                   }}
                 >
                   Bowl Planner

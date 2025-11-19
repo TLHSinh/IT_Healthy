@@ -18,75 +18,95 @@ namespace ITHealthy.Controllers
             _context = context;
         }
 
-        [HttpPost("create")]
-        public async Task<IActionResult> CreateBowl([FromBody] CreateBowlRequest request)
-        {
-            if (request.Ingredients == null || !request.Ingredients.Any())
-                return BadRequest("Bowl must contain at least one ingredient.");
 
-            // Lấy danh sách Ingredient từ DB
-            var ingredientIds = request.Ingredients.Select(i => i.IngredientId).ToList();
+
+        private async Task<(bool isValid, List<Ingredient>? ingredients, string? error)>
+            ValidateIngredients(List<BowlIngredientRequest> ingredientRequests)
+        {
+            if (ingredientRequests == null || ingredientRequests.Count == 0)
+                return (false, null, "Bowl must contain at least one ingredient.");
+
+            var ids = ingredientRequests.Select(i => i.IngredientId).ToList();
             var ingredients = await _context.Ingredients
-                .Where(i => ingredientIds.Contains(i.IngredientId))
+                .Where(i => ids.Contains(i.IngredientId))
                 .ToListAsync();
 
-            if (ingredients.Count != ingredientIds.Count)
-                return BadRequest("Some ingredients do not exist.");
+            if (ingredients.Count != ids.Count)
+            {
+                var missing = ids.Except(ingredients.Select(i => i.IngredientId));
+                return (false, null, $"Some ingredients do not exist: {string.Join(",", missing)}");
+            }
 
-            // Tính toán nutrition
-            decimal totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalPrice = 0;
+            return (true, ingredients, null);
+        }
 
-            foreach (var item in request.Ingredients)
+        private (decimal calories, decimal protein, decimal carbs, decimal fat, decimal price)
+            CalculateNutrition(List<BowlIngredientRequest> reqIngredients, List<Ingredient> ingredients)
+        {
+            decimal cal = 0, pro = 0, carb = 0, fat = 0, price = 0;
+
+            foreach (var item in reqIngredients)
             {
                 var ing = ingredients.First(i => i.IngredientId == item.IngredientId);
 
-                totalCalories += (ing.Calories ?? 0) * item.Quantity;
-                totalProtein += (ing.Protein ?? 0) * item.Quantity;
-                totalCarbs += (ing.Carbs ?? 0) * item.Quantity;
-                totalFat += (ing.Fat ?? 0) * item.Quantity;
-                totalPrice += ing.BasePrice * item.Quantity;
+                cal += (ing.Calories ?? 0) * item.Quantity;
+                pro += (ing.Protein ?? 0) * item.Quantity;
+                carb += (ing.Carbs ?? 0) * item.Quantity;
+                fat += (ing.Fat ?? 0) * item.Quantity;
+                price += ing.BasePrice * item.Quantity;
             }
 
-            // Tạo Bowl
+            return (cal, pro, carb, fat, price);
+        }
+
+        // ===================================
+
+        //http://localhost:5000/api/bowl/create
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateBowl([FromBody] CreateBowlRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.BowlName))
+                return BadRequest("BowlName is required.");
+
+            // validate ingredients
+            var (isValid, ingredients, error) = await ValidateIngredients(request.Ingredients);
+            if (!isValid) return BadRequest(error);
+
+            // calculate nutrition
+            var (cal, pro, carb, fat, price) = CalculateNutrition(request.Ingredients, ingredients);
+
             var bowl = new Bowl
             {
                 CustomerId = request.CustomerId,
                 BowlName = request.BowlName,
-                BaseCalories = totalCalories,
-                TotalProtein = totalProtein,
-                TotalCarbs = totalCarbs,
-                TotalFat = totalFat,
-                BasePrice = totalPrice,
-                TotalPrice = totalPrice,
-                CreatedAt = DateTime.Now
+                BaseCalories = cal,
+                TotalProtein = pro,
+                TotalCarbs = carb,
+                TotalFat = fat,
+                BasePrice = price,
+                TotalPrice = price,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Bowls.Add(bowl);
             await _context.SaveChangesAsync();
 
-            // Tạo BowlItem
+            // create bowl items
             foreach (var item in request.Ingredients)
             {
-                var ingredient = ingredients.First(i => i.IngredientId == item.IngredientId);
-
-                var bowlItem = new BowlItem
+                var ing = ingredients.First(i => i.IngredientId == item.IngredientId);
+                _context.BowlItems.Add(new BowlItem
                 {
                     BowlId = bowl.BowlId,
-                    IngredientId = ingredient.IngredientId,
+                    IngredientId = ing.IngredientId,
                     Quantity = item.Quantity,
-                    Price = ingredient.BasePrice * item.Quantity
-                };
-
-                _context.BowlItems.Add(bowlItem);
+                    Price = ing.BasePrice * item.Quantity
+                });
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Bowl created successfully",
-                bowlId = bowl.BowlId
-            });
+            return Ok(new { message = "Bowl created successfully", bowlId = bowl.BowlId });
         }
 
 
@@ -96,11 +116,11 @@ namespace ITHealthy.Controllers
         {
             var bowls = await _context.Bowls
                 .Include(b => b.BowlItems)
-                    .ThenInclude(bi => bi.Ingredient)
+                    .ThenInclude(i => i.Ingredient)
                 .Where(b => b.CustomerId == customerId)
                 .ToListAsync();
 
-            var result = bowls.Select(b => new
+            return Ok(bowls.Select(b => new
             {
                 b.BowlId,
                 b.BowlName,
@@ -110,79 +130,68 @@ namespace ITHealthy.Controllers
                 b.TotalCarbs,
                 b.TotalFat,
                 b.CreatedAt,
-                Ingredients = b.BowlItems.Select(bi => new
+                Ingredients = b.BowlItems.Select(i => new
                 {
-                    bi.IngredientId,
-                    bi.Ingredient.IngredientName,
-                    bi.Quantity,
-                    bi.Price
+                    i.IngredientId,
+                    i.Ingredient.IngredientName,
+                    i.Quantity,
+                    i.Price
                 })
-            });
-
-            return Ok(result);
+            }));
         }
-
 
 
         [HttpPut("update/{bowlId}")]
         public async Task<IActionResult> UpdateBowl(int bowlId, [FromBody] CreateBowlRequest request)
         {
-            var bowl = await _context.Bowls
-                .Include(b => b.BowlItems)
-                .FirstOrDefaultAsync(b => b.BowlId == bowlId);
+            var bowl = await _context.Bowls.Include(b => b.BowlItems)
+                                           .FirstOrDefaultAsync(b => b.BowlId == bowlId);
 
             if (bowl == null)
                 return NotFound("Bowl not found.");
 
+            if (request.Ingredients == null || request.Ingredients.Count == 0)
+                return BadRequest("Ingredients cannot be empty.");
+
+            var (isValid, ingredients, error) = await ValidateIngredients(request.Ingredients);
+            if (!isValid) return BadRequest(error);
+
+            var (cal, pro, carb, fat, price) = CalculateNutrition(request.Ingredients, ingredients);
+
             bowl.BowlName = request.BowlName;
+            bowl.BaseCalories = cal;
+            bowl.TotalProtein = pro;
+            bowl.TotalCarbs = carb;
+            bowl.TotalFat = fat;
+            bowl.TotalPrice = price;
 
-            // Xóa các BowlItem cũ
+            // Replace items
             _context.BowlItems.RemoveRange(bowl.BowlItems);
-
-            // Lấy các ingredient mới
-            var ingredientIds = request.Ingredients.Select(i => i.IngredientId).ToList();
-            var ingredients = await _context.Ingredients
-                .Where(i => ingredientIds.Contains(i.IngredientId))
-                .ToListAsync();
-
-            decimal totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalPrice = 0;
 
             foreach (var item in request.Ingredients)
             {
                 var ing = ingredients.First(i => i.IngredientId == item.IngredientId);
-                totalCalories += (ing.Calories ?? 0) * item.Quantity;
-                totalProtein += (ing.Protein ?? 0) * item.Quantity;
-                totalCarbs += (ing.Carbs ?? 0) * item.Quantity;
-                totalFat += (ing.Fat ?? 0) * item.Quantity;
-                totalPrice += ing.BasePrice * item.Quantity;
 
-                var bowlItem = new BowlItem
+                _context.BowlItems.Add(new BowlItem
                 {
                     BowlId = bowl.BowlId,
                     IngredientId = ing.IngredientId,
                     Quantity = item.Quantity,
                     Price = ing.BasePrice * item.Quantity
-                };
-                _context.BowlItems.Add(bowlItem);
+                });
             }
-
-            bowl.BaseCalories = totalCalories;
-            bowl.TotalProtein = totalProtein;
-            bowl.TotalCarbs = totalCarbs;
-            bowl.TotalFat = totalFat;
-            bowl.TotalPrice = totalPrice;
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Bowl updated successfully" });
         }
 
 
+
         [HttpDelete("delete/{bowlId}")]
         public async Task<IActionResult> DeleteBowl(int bowlId)
         {
-            var bowl = await _context.Bowls
-                .Include(b => b.BowlItems)
-                .FirstOrDefaultAsync(b => b.BowlId == bowlId);
+            var bowl = await _context.Bowls.Include(b => b.BowlItems)
+                                           .FirstOrDefaultAsync(b => b.BowlId == bowlId);
 
             if (bowl == null)
                 return NotFound("Bowl not found.");
@@ -194,60 +203,51 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Bowl deleted successfully" });
         }
 
+
         [HttpPost("clone-to-cart/{bowlId}")]
         public async Task<IActionResult> CloneBowlToCart(int bowlId, [FromQuery] int customerId)
         {
-            var bowl = await _context.Bowls
-                .Include(b => b.BowlItems)
-                    .ThenInclude(bi => bi.Ingredient)
-                .FirstOrDefaultAsync(b => b.BowlId == bowlId);
+            var bowl = await _context.Bowls.FirstOrDefaultAsync(b => b.BowlId == bowlId);
+            if (bowl == null) return NotFound("Bowl not found.");
 
-            if (bowl == null)
-                return NotFound("Bowl not found.");
-
-            // Lấy giỏ hàng customer
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+            var cart = await _context.Carts.Include(c => c.CartItems)
+                                           .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
             if (cart == null)
             {
                 cart = new Cart
                 {
                     CustomerId = customerId,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
             }
 
-            // Thêm Bowl vào cart
-            var existingItem = cart.CartItems.FirstOrDefault(i => i.BowlId == bowlId);
-            if (existingItem != null)
+            var item = cart.CartItems.FirstOrDefault(i => i.BowlId == bowlId);
+
+            if (item != null)
             {
-                existingItem.Quantity += 1;
-                existingItem.AddedAt = DateTime.Now;
+                item.Quantity++;
+                item.AddedAt = DateTime.UtcNow;
             }
             else
             {
-                var cartItem = new CartItem
+                _context.CartItems.Add(new CartItem
                 {
                     CartId = cart.CartId,
                     BowlId = bowl.BowlId,
                     Quantity = 1,
                     UnitPrice = bowl.TotalPrice,
-                    AddedAt = DateTime.Now
-                };
-                _context.CartItems.Add(cartItem);
+                    AddedAt = DateTime.UtcNow
+                });
             }
 
-            cart.UpdatedAt = DateTime.Now;
+            cart.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Bowl cloned to cart successfully" });
+            return Ok(new { message = "Bowl added to cart successfully" });
         }
-
     }
-
 }

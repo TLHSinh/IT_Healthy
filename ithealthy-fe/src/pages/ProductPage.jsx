@@ -62,7 +62,7 @@ export default function MenuPage() {
           submenuOpen ? "top-36" : "top-20"
         }`}
       >
-        <div className="flex justify-center p-2">
+        <div className="flex justify-center p-8">
           <div className="flex items-center gap-8 bg-green-200 rounded-full px-2 py-1 shadow-md">
             {categories.map((cat) => (
               <button
