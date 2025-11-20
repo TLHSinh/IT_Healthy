@@ -1,14 +1,8 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { AuthContext } from "../context/AuthContext";
-import {
-  CircleUserRound,
-  LogIn,
-  LogOut,
-  User,
-  ShoppingCart,
-} from "lucide-react";
+import { CircleUserRound, LogOut, User, ShoppingCart } from "lucide-react";
 
 const Navbar = ({ onSubmenuToggle }) => {
   const [activeMenu, setActiveMenu] = useState(null);
@@ -16,9 +10,20 @@ const Navbar = ({ onSubmenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
+
   const isHomePage = location.pathname === "/";
 
-  // Detect scroll
+  // Các route thuộc nhóm "Our bowls"
+  const isOurBowlsPage = [
+    "/signature-bowls",
+    "/createyourbowl",
+    "/UserBowlPage",
+  ].some((path) => location.pathname.startsWith(path));
+
+  // submenu chỉ mở khi đang ở trang our bowls + user đã click Our bowls
+  const shouldShowSubmenu = isOurBowlsPage && activeMenu === "menu";
+
+  // Detect scroll chỉ ở homepage
   useEffect(() => {
     const handleScroll = () => {
       if (isHomePage) {
@@ -26,8 +31,13 @@ const Navbar = ({ onSubmenuToggle }) => {
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    if (isHomePage) {
+      window.addEventListener("scroll", handleScroll);
+    }
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, [isHomePage]);
 
   const handleLogout = () => {
@@ -39,10 +49,14 @@ const Navbar = ({ onSubmenuToggle }) => {
     if (menu === "menu") {
       const newState = activeMenu === "menu" ? null : "menu";
       setActiveMenu(newState);
-      onSubmenuToggle?.(newState === "menu");
+      if (onSubmenuToggle) {
+        onSubmenuToggle(newState === "menu");
+      }
     } else {
       setActiveMenu(null);
-      onSubmenuToggle?.(false);
+      if (onSubmenuToggle) {
+        onSubmenuToggle(false);
+      }
     }
   };
 
@@ -68,9 +82,14 @@ const Navbar = ({ onSubmenuToggle }) => {
               e.preventDefault();
               navigate("/");
               setActiveMenu(null);
+              if (onSubmenuToggle) onSubmenuToggle(false);
             }}
           >
-            <img src="/img/logo.png" className="logo-ithealthy" />
+            <img
+              src="/img/logo.png"
+              className="logo-ithealthy"
+              alt="ITHealthy"
+            />
           </a>
 
           {/* Main Navigation */}
@@ -84,7 +103,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                   onClick={(e) => {
                     e.preventDefault();
                     navigate("/calories");
-                    setActiveMenu(null);
+                    handleMenuClick("none");
                   }}
                 >
                   Calories calculator
@@ -120,7 +139,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                   onClick={(e) => {
                     e.preventDefault();
                     navigate("/aboutus");
-                    setActiveMenu(null);
+                    handleMenuClick("none");
                   }}
                 >
                   About us
@@ -133,7 +152,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                   onClick={(e) => {
                     e.preventDefault();
                     navigate("/stores");
-                    setActiveMenu(null);
+                    handleMenuClick("none");
                   }}
                 >
                   Stores
@@ -146,7 +165,7 @@ const Navbar = ({ onSubmenuToggle }) => {
                   onClick={(e) => {
                     e.preventDefault();
                     navigate("/blogs");
-                    setActiveMenu(null);
+                    handleMenuClick("none");
                   }}
                 >
                   Blogs
@@ -168,8 +187,8 @@ const Navbar = ({ onSubmenuToggle }) => {
             </ul>
           </nav>
 
+          {/* Auth & Cart */}
           <div className="navbar-auth">
-            {/* Giỏ hàng */}
             <button
               className="cart-btn"
               onClick={() => navigate("/carts")}
@@ -181,7 +200,6 @@ const Navbar = ({ onSubmenuToggle }) => {
               />
             </button>
 
-            {/* Nếu đã đăng nhập thì hiển thị avatar + menu */}
             {user ? (
               <div className="user-menu-wrapper">
                 <img
@@ -227,60 +245,62 @@ const Navbar = ({ onSubmenuToggle }) => {
         </div>
       </div>
 
-      {/* Submenu - Our Bowls */}
-      {activeMenu === "menu" && (
-        <div className="submenu-container">
-          <nav className="submenu-nav">
-            <ul className="submenu-menu">
-              <li
-                className={`submenu-item ${
-                  isActive("/signature-bowls") ? "active" : ""
-                }`}
+      {/* Submenu - Our Bowls (luôn render, nhưng mượt mà + chỉ mở khi ở our bowls) */}
+      <div
+        className={`submenu-container ${
+          shouldShowSubmenu ? "submenu-open" : "submenu-closed"
+        } ${isOurBowlsPage ? "" : "submenu-disabled"}`}
+      >
+        <nav className="submenu-nav">
+          <ul className="submenu-menu">
+            <li
+              className={`submenu-item ${
+                isActive("/signature-bowls") ? "active" : ""
+              }`}
+            >
+              <a
+                href="/menu/sou-made-bowls"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/signature-bowls");
+                }}
               >
-                <a
-                  href="/menu/sou-made-bowls"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/signature-bowls");
-                  }}
-                >
-                  Signature Bowls
-                </a>
-              </li>
-              <li
-                className={`submenu-item ${
-                  isActive("/createyourbowl") ? "active" : ""
-                }`}
+                Signature Bowls
+              </a>
+            </li>
+            <li
+              className={`submenu-item ${
+                isActive("/createyourbowl") ? "active" : ""
+              }`}
+            >
+              <a
+                href="/build-your-own"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/createyourbowl");
+                }}
               >
-                <a
-                  href="/build-your-own"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/createyourbowl");
-                  }}
-                >
-                  Create Your Bowl
-                </a>
-              </li>
-              <li
-                className={`submenu-item ${
-                  isActive("/UserBowlPage") ? "active" : ""
-                }`}
+                Create Your Bowl
+              </a>
+            </li>
+            <li
+              className={`submenu-item ${
+                isActive("/UserBowlPage") ? "active" : ""
+              }`}
+            >
+              <a
+                href="/menu/plan-your-bowls"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/UserBowlPage");
+                }}
               >
-                <a
-                  href="/menu/plan-your-bowls"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/UserBowlPage");
-                  }}
-                >
-                  Bowl Planner
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      )}
+                Bowl Planner
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </div>
   );
 };
