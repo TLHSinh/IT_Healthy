@@ -17,6 +17,7 @@ public class CheckoutRequest
     public DateTime? ShipDate { get; set; }
     public string? ShipTime { get; set; }
     public decimal? ShippingCost { get; set; }
+    public string? PaymentMethod { get; set; }
 
     public List<CheckoutItem> Items { get; set; } = new List<CheckoutItem>();
 }

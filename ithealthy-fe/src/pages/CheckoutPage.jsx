@@ -38,6 +38,7 @@ const SHIPPING_OPTIONS = {
   },
 };
 
+// Chỉ giữ 2 phương thức tương ứng API hiện hỗ trợ: COD + MoMo
 const PAYMENT_METHODS = [
   {
     id: "cod",
@@ -51,18 +52,6 @@ const PAYMENT_METHODS = [
     icon: "🟣",
     description: "Thanh toán qua ví điện tử MoMo",
   },
-  {
-    id: "banking",
-    name: "Chuyển khoản ngân hàng",
-    icon: "🏦",
-    description: "Chuyển khoản qua Internet Banking",
-  },
-  {
-    id: "card",
-    name: "Thẻ tín dụng/ghi nợ",
-    icon: "💳",
-    description: "Visa, Mastercard, JCB",
-  },
 ];
 
 // ============= MAIN COMPONENT =============
@@ -75,9 +64,11 @@ export default function CheckoutPage() {
   // ============= STATES =============
   const [cart] = useState(initialCart);
   const [loading, setLoading] = useState(false);
+
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
   const [stores, setStores] = useState([]);
   const [selectedStore, setSelectedStore] = useState(null);
 
@@ -132,8 +123,7 @@ export default function CheckoutPage() {
     }
   }, [cart, navigate]);
 
-  // ============= LOAD STORE =============
-
+  // ============= LOAD STORE KHI PICKUP =============
   useEffect(() => {
     if (shippingMethod !== "pickup") return;
 
@@ -141,7 +131,9 @@ export default function CheckoutPage() {
       try {
         const res = await axios.get("http://localhost:5000/api/stores");
         setStores(res.data || []);
-        setSelectedStore(res.data[0]); // auto chọn cửa hàng đầu tiên
+        if (res.data && res.data.length > 0) {
+          setSelectedStore(res.data[0]);
+        }
       } catch (err) {
         console.error(err);
         toast.error("Không thể tải danh sách cửa hàng");
@@ -163,7 +155,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Reset trước mỗi lần apply
     setDiscount(0);
     setAppliedVoucher(null);
 
@@ -205,28 +196,43 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (orderType === "Pickup" && !selectedStore) {
+      toast.error("Vui lòng chọn cửa hàng nhận hàng.");
+      return;
+    }
+
     if (!agreeTerms) {
       toast.error("Vui lòng đồng ý với điều khoản và điều kiện.");
       return;
     }
 
-    if (cart.items.length === 0) {
+    if (!cart || cart.items.length === 0) {
       toast.error("Giỏ hàng trống!");
+      return;
+    }
+
+    if (!["cod", "momo"].includes(paymentMethod)) {
+      toast.error("Phương thức thanh toán không hợp lệ.");
       return;
     }
 
     setLoading(true);
 
+    // Map paymentMethod FE -> API (COD / MOMO)
+    const apiPaymentMethod =
+      paymentMethod === "cod" ? "COD" : paymentMethod === "momo" ? "MOMO" : "";
+
     const requestPayload = {
       CustomerId: user.customerId,
-      StoreId: orderType === "Pickup" ? selectedStore?.storeId : 1,
+      StoreId: orderType === "Pickup" ? selectedStore?.storeId : 1, // TODO: có thể cho user chọn store nếu Shipping theo khu vực
       VoucherId: appliedVoucher,
       PromotionId: null,
       Discount: discount,
       OrderType: orderType,
       OrderNote: orderNotes || "",
+
       ShippingAddressId:
-        orderType === "Shipping" ? selectedAddress.addressId : null,
+        orderType === "Shipping" ? selectedAddress?.addressId : null,
 
       CourierName:
         orderType === "Shipping"
@@ -238,6 +244,8 @@ export default function CheckoutPage() {
       ShipDate: orderType === "Shipping" ? new Date().toISOString() : null,
       ShipTime: null,
       ShippingCost: orderType === "Shipping" ? shippingCost : 0,
+
+      PaymentMethod: apiPaymentMethod,
 
       Items: cart.items.map((item) => ({
         ProductId: item.productId,
@@ -254,20 +262,21 @@ export default function CheckoutPage() {
         requestPayload
       );
 
+      const { orderId, payUrl, deeplink } = res.data || {};
+
       // Nếu có voucher đã áp dụng → gọi API redeem
-      if (appliedVoucher) {
+      if (appliedVoucher && orderId) {
         try {
           await axios.post("http://localhost:5000/api/vouchers/redeem", {
             VoucherId: appliedVoucher,
             CustomerId: user.customerId,
-            OrderId: res.data.orderId,
+            OrderId: orderId,
             Amount: discount,
           });
-          console.log("Voucher đã được redeem thành công");
         } catch (redeemErr) {
           console.error("Redeem voucher thất bại:", redeemErr);
           toast.error(
-            "Không thể áp dụng voucher vào đơn hàng. Liên hệ support!"
+            "Không thể áp dụng voucher vào đơn hàng. Vui lòng liên hệ hỗ trợ!"
           );
         }
       }
@@ -275,25 +284,38 @@ export default function CheckoutPage() {
       // Clear cart from localStorage
       localStorage.removeItem("checkout_cart");
 
-      toast.success(`Đặt hàng thành công! Mã đơn hàng: ${res.data.orderId}`);
-
-      // Redirect based on payment method
+      // Phân nhánh theo phương thức thanh toán
       if (paymentMethod === "momo") {
-        window.location.href = res.data.paymentUrl; // MoMo payment URL
+        // API MoMo của bạn đang trả: { orderId, payUrl, deeplink, message }
+        const redirectUrl = payUrl || deeplink;
+
+        if (!redirectUrl) {
+          toast.error("Không nhận được link thanh toán MoMo từ hệ thống.");
+          return;
+        }
+
+        toast.success("Chuyển sang cổng thanh toán MoMo...");
+        window.location.href = redirectUrl;
       } else {
+        // COD
+        toast.success(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
+
         navigate("/OrderSuccess", {
           state: {
-            orderId: res.data.orderId,
+            orderId,
             paymentMethod,
             total,
           },
         });
       }
     } catch (err) {
-      toast.error(
-        `Thanh toán thất bại: ${err.response?.data?.message || err.message}`
-      );
       console.error(err);
+      const message =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Đã xảy ra lỗi trong quá trình thanh toán.";
+      toast.error(`Thanh toán thất bại: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -301,6 +323,8 @@ export default function CheckoutPage() {
 
   // ============= RENDER =============
   if (!cart) return null;
+
+  const isShipping = orderType === "Shipping";
 
   return (
     <div className="bg-gray-50 min-h-screen pt-20 pb-12">
@@ -331,25 +355,29 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN - MAIN CONTENT */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 1. SHIPPING ADDRESS */}
+            {/* 1. SHIPPING ADDRESS / STORE PICKUP */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <MapPin className="text-green-600" size={24} />
-                  Địa chỉ giao hàng
+                  {orderType === "Pickup"
+                    ? "Nhận tại cửa hàng"
+                    : "Địa chỉ giao hàng"}
                 </h2>
-                <button
-                  onClick={() => setIsAddressModalOpen(true)}
-                  className="text-green-600 hover:text-green-700 font-medium text-sm"
-                >
-                  {selectedAddress ? "Thay đổi" : "Chọn địa chỉ"}
-                </button>
+                {orderType === "Shipping" && (
+                  <button
+                    onClick={() => setIsAddressModalOpen(true)}
+                    className="text-green-600 hover:text-green-700 font-medium text-sm"
+                  >
+                    {selectedAddress ? "Thay đổi" : "Chọn địa chỉ"}
+                  </button>
+                )}
               </div>
 
-              {shippingMethod === "pickup" ? (
+              {orderType === "Pickup" ? (
                 <div className="bg-green-50 border border-green-300 rounded-xl p-4">
                   <p className="font-semibold text-gray-900 mb-2">
-                    Chọn cửa hàng
+                    Chọn cửa hàng nhận món
                   </p>
 
                   <select
@@ -357,7 +385,7 @@ export default function CheckoutPage() {
                     value={selectedStore?.storeId || ""}
                     onChange={(e) => {
                       const store = stores.find(
-                        (s) => s.storeId === parseInt(e.target.value)
+                        (s) => s.storeId === parseInt(e.target.value, 10)
                       );
                       setSelectedStore(store);
                     }}
@@ -370,7 +398,7 @@ export default function CheckoutPage() {
                   </select>
 
                   {selectedStore && (
-                    <div className="mt-3 text-sm text-gray-700">
+                    <div className="mt-3 text-sm text-gray-700 space-y-1">
                       <p>
                         <strong>Địa chỉ:</strong> {selectedStore.streetAddress},{" "}
                         {selectedStore.ward}, {selectedStore.district},{" "}
@@ -504,6 +532,12 @@ export default function CheckoutPage() {
                       <p className="text-sm text-gray-500 mt-1">
                         {method.description}
                       </p>
+                      {method.id === "momo" && (
+                        <p className="text-xs text-purple-500 mt-1">
+                          Bạn sẽ được chuyển sang cổng thanh toán MoMo sau khi
+                          tạo đơn.
+                        </p>
+                      )}
                     </div>
                   </label>
                 ))}
@@ -593,40 +627,35 @@ export default function CheckoutPage() {
                   <button
                     onClick={handleApplyVoucher}
                     disabled={discount > 0}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:bg-gray-300"
                   >
                     Áp dụng
                   </button>
                 </div>
 
                 {appliedVoucher && discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>
-                      {voucherCode === "FREESHIP"
-                        ? "Miễn phí vận chuyển"
-                        : "Giảm giá"}
-                    </span>
+                  <div className="flex justify-between text-green-600 mt-2 text-sm">
+                    <span>Giảm giá</span>
                     <span>-{discount.toLocaleString("vi-VN")}₫</span>
                   </div>
                 )}
 
                 {discount > 0 && (
-                  <button
-                    className="text-red-600 text-sm mt-2"
-                    onClick={() => {
-                      setVoucherCode("");
-                      setDiscount(0);
-                      setAppliedVoucher(null);
-                    }}
-                  >
-                    Xóa mã
-                  </button>
-                )}
-
-                {discount > 0 && (
-                  <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
-                    ✓ Giảm giá: -{discount.toLocaleString("vi-VN")}₫
-                  </p>
+                  <>
+                    <button
+                      className="text-red-600 text-sm mt-2"
+                      onClick={() => {
+                        setVoucherCode("");
+                        setDiscount(0);
+                        setAppliedVoucher(null);
+                      }}
+                    >
+                      Xóa mã
+                    </button>
+                    <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                      ✓ Giảm giá: -{discount.toLocaleString("vi-VN")}₫
+                    </p>
+                  </>
                 )}
               </div>
 
@@ -693,7 +722,12 @@ export default function CheckoutPage() {
                 {/* CHECKOUT BUTTON */}
                 <button
                   onClick={handleCheckout}
-                  disabled={loading || !selectedAddress || !agreeTerms}
+                  disabled={
+                    loading ||
+                    !agreeTerms ||
+                    (isShipping && !selectedAddress) ||
+                    (!isShipping && !selectedStore)
+                  }
                   className="w-full bg-green-600 text-white py-4 rounded-xl hover:bg-green-700 transition font-semibold text-lg mt-4 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
@@ -704,7 +738,9 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <ShieldCheck size={20} />
-                      Đặt hàng
+                      {paymentMethod === "momo"
+                        ? "Đặt hàng & thanh toán với MoMo"
+                        : "Đặt hàng (COD)"}
                     </>
                   )}
                 </button>
@@ -715,6 +751,7 @@ export default function CheckoutPage() {
                   Thanh toán an toàn & bảo mật
                 </div>
 
+                {/* ADDRESS MODAL */}
                 <AddressModal
                   user={user}
                   addresses={addresses}

@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins("http://localhost:3000","http://localhost:3001") // 👈 đúng domain React dev
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001") // 👈 đúng domain React dev
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // 👈 nếu có gửi cookie/token
@@ -79,6 +79,14 @@ builder.Services.AddScoped<AdminTokenService, TokenService>();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 // builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddScoped<CloudinaryService>();
+
+
+builder.Services.Configure<MomoSettings>(
+    builder.Configuration.GetSection("MoMo"));
+builder.Services.AddHttpClient(); // để dùng HttpClientFactory
+
+builder.Services.AddScoped<IMomoService, MomoService>();
+
 
 // 7️⃣ Xây dựng app
 var app = builder.Build();

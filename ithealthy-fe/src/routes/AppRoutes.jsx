@@ -13,6 +13,7 @@ import CreateYourBowlPage from "../pages/CreateYourBowlPage";
 import CartsPage from "../pages/CartsPage";
 import CheckoutPage from "../pages/CheckoutPage";
 import OrderSuccessPage from "../pages/OrderSuccessPage";
+import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import UserBowlPage from "../pages/UserBowlPage";
 
 import MainLayout from "../layouts/MainLayout";
@@ -33,6 +34,7 @@ export default function AppRoutes() {
           <Route path="/Carts" element={<CartsPage />} />
           <Route path="/Checkout" element={<CheckoutPage />} />
           <Route path="/OrderSuccess" element={<OrderSuccessPage />} />
+          <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/UserBowlPage" element={<UserBowlPage />} />
         </Route>
 

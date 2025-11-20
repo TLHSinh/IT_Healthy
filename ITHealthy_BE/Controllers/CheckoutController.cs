@@ -10,11 +10,14 @@ namespace ITHealthy.Controllers
     public class CheckoutController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;
+        private readonly IMomoService _momoService;
 
-        public CheckoutController(ITHealthyDbContext context)
+        public CheckoutController(ITHealthyDbContext context, IMomoService momoService)
         {
             _context = context;
+            _momoService = momoService;
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
@@ -29,7 +32,10 @@ namespace ITHealthy.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Tạo Order mới
+                var totalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity);
+                var discount = request.Discount ?? 0;
+                var finalPrice = totalPrice - discount;
+
                 var order = new Order
                 {
                     CustomerId = request.CustomerId,
@@ -37,17 +43,30 @@ namespace ITHealthy.Controllers
                     VoucherId = request.VoucherId,
                     PromotionId = request.PromotionId,
                     OrderDate = DateTime.UtcNow,
-                    TotalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity),
-                    DiscountApplied = request.Discount ?? 0,
-                    FinalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity) - (request.Discount ?? 0),
+                    TotalPrice = totalPrice,
+                    DiscountApplied = discount,
+                    FinalPrice = finalPrice,
                     StatusOrder = "Pending",
                     InventoryDeducted = false,
-                    OrderNote = request.OrderNote,           // lưu ghi chú
-                    OrderType = request.OrderType           // lưu loại đơn hàng
+                    OrderNote = request.OrderNote,
+                    OrderType = request.OrderType
                 };
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
+
+                var payment = new Payment
+                {
+                    OrderId = order.OrderId,
+                    PaymentDate = DateTime.UtcNow,
+                    PaymentMethod = request.PaymentMethod, // "COD" or "MOMO"
+                    Amount = order.FinalPrice,
+                    Status = "Pending"
+                };
+                _context.Payments.Add(payment);
+                await _context.SaveChangesAsync();
+
+
 
                 // 2. Tạo OrderItem và trừ kho nguyên liệu
                 foreach (var item in request.Items)
@@ -64,39 +83,7 @@ namespace ITHealthy.Controllers
                     };
                     _context.OrderItems.Add(orderItem);
 
-                    // 3. Trừ kho nguyên liệu nếu có ProductId
-                    if (item.ProductId.HasValue)
-                    {
-                        var productIngredients = await _context.ProductIngredients
-                            .Where(pi => pi.ProductId == item.ProductId.Value)
-                            .ToListAsync();
-
-                        foreach (var pi in productIngredients)
-                        {
-                            var storeInventory = await _context.StoreInventories
-                                .FirstOrDefaultAsync(si => si.StoreId == request.StoreId && si.IngredientId == pi.IngredientId);
-
-                            if (storeInventory == null)
-                                return BadRequest($"Ingredient {pi.IngredientId} not found in store inventory.");
-
-                            decimal totalUsed = Math.Round(pi.Quantity * item.Quantity, 2);
-                            decimal epsilon = 0.0001M;
-                            if ((storeInventory.StockQuantity ?? 0) + epsilon < totalUsed)
-                                return BadRequest($"Not enough stock for ingredient {pi.Ingredient?.IngredientName ?? pi.IngredientId.ToString()}.");
-
-                            storeInventory.StockQuantity -= totalUsed;
-                            storeInventory.LastUpdated = DateTime.UtcNow;
-
-                            // Thêm OrderItemIngredient
-                            var orderItemIngredient = new OrderItemIngredient
-                            {
-                                OrderItem = orderItem,
-                                IngredientId = pi.IngredientId,
-                                Quantity = totalUsed
-                            };
-                            _context.Add(orderItemIngredient);
-                        }
-                    }
+                    // Trừ kho nguyên liệu
                 }
 
                 // 4. Nếu OrderType = Shipping thì lưu ShippingDetails
@@ -114,54 +101,155 @@ namespace ITHealthy.Controllers
                     _context.ShippingDetails.Add(shippingDetail);
                 }
 
-                // 5. Xóa CartItems đã checkout
-                var productIds = request.Items
-                    .Where(i => i.ProductId.HasValue)
-                    .Select(i => i.ProductId!.Value)
-                    .ToList();
-
-                var comboIds = request.Items
-                    .Where(i => i.ComboId.HasValue)
-                    .Select(i => i.ComboId!.Value)
-                    .ToList();
-
-                var bowlIds = request.Items
-                    .Where(i => i.BowlId.HasValue)
-                    .Select(i => i.BowlId!.Value)
-                    .ToList();
-
-                var cartItemsToRemove = await _context.CartItems
-                    .Where(ci => ci.Cart.CustomerId == request.CustomerId &&
-                                 ((ci.ProductId.HasValue && productIds.Contains(ci.ProductId.Value)) ||
-                                  (ci.ComboId.HasValue && comboIds.Contains(ci.ComboId.Value)) ||
-                                  (ci.BowlId.HasValue && bowlIds.Contains(ci.BowlId.Value))))
-                    .ToListAsync();
-
-                _context.CartItems.RemoveRange(cartItemsToRemove);
-
-                var cartIds = cartItemsToRemove.Select(ci => ci.CartId).Distinct();
-                var emptyCarts = await _context.Carts
-                    .Where(c => cartIds.Contains(c.CartId) && !c.CartItems.Any())
-                    .ToListAsync();
-                _context.Carts.RemoveRange(emptyCarts);
-
                 await _context.SaveChangesAsync();
 
-                // 6. Đánh dấu inventory đã trừ
-                order.InventoryDeducted = true;
-                await _context.SaveChangesAsync();
+                if (request.PaymentMethod == "COD")
+                {
+                    // COD: trừ kho + xóa cart ngay
+                    var invResult = await DeductInventoryForOrder(order.OrderId, request.StoreId);
+                    if (!invResult.IsSuccess)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(invResult.ErrorMessage);
+                    }
 
-                await transaction.CommitAsync();
+                    await RemoveCartItemsForOrder(order.OrderId, request.CustomerId);
+                    order.InventoryDeducted = true;
+                    await _context.SaveChangesAsync();
 
-                return Ok(new { orderId = order.OrderId, message = "Checkout successful and inventory updated." });
+                    await transaction.CommitAsync();
+                    return Ok(new { orderId = order.OrderId, message = "Checkout successful (COD)." });
+                }
+
+
+                else if (request.PaymentMethod == "MOMO")
+                {
+                    // MOMO: tạo payment link, KHÔNG trừ kho, KHÔNG xóa cart
+                    var description = $"Thanh toán đơn hàng #{order.OrderId}";
+                    var extraData = order.OrderId.ToString(); // để IPN quay về nhận diện
+
+                    var momoResponse = await _momoService.CreatePaymentAsync(
+                        order.OrderId,
+                        order.FinalPrice ?? 0,
+                        description,
+                        extraData
+                    );
+
+                    // Gợi ý: lưu momoOrderId && requestId vào Payment
+                    payment.Status = "Pending";
+                    // Bạn có thể thêm cột vào Payment:
+                    // payment.MomoOrderId = momoResponse.orderId;
+                    // payment.MomoRequestId = momoResponse.requestId;
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+
+                    return Ok(new
+                    {
+                        orderId = order.OrderId,
+                        payUrl = momoResponse.payUrl,
+                        deeplink = momoResponse.deeplink,
+                        message = "Order created. Redirect to MoMo."
+                    });
+                }
+                else
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest("Unsupported payment method.");
+                }
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, $"Checkout failed: {ex.Message}");
+
             }
         }
+
+        //Helper trừ kho xoá giỏ hàng
+        private async Task<OperationResult> DeductInventoryForOrder(int orderId, int storeId)
+        {
+            var orderItems = await _context.OrderItems
+                .Where(oi => oi.OrderId == orderId && oi.ProductId.HasValue)
+                .ToListAsync();
+
+            foreach (var orderItem in orderItems)
+            {
+                var productIngredients = await _context.ProductIngredients
+                    .Where(pi => pi.ProductId == orderItem.ProductId.Value)
+                    .ToListAsync();
+
+                foreach (var pi in productIngredients)
+                {
+                    var storeInventory = await _context.StoreInventories
+                        .FirstOrDefaultAsync(si => si.StoreId == storeId && si.IngredientId == pi.IngredientId);
+
+                    if (storeInventory == null)
+                        return OperationResult.Fail($"Ingredient {pi.IngredientId} not found in store inventory.");
+
+                    decimal totalUsed = Math.Round(pi.Quantity * orderItem.Quantity, 2);
+                    decimal epsilon = 0.0001M;
+
+                    if ((storeInventory.StockQuantity ?? 0) + epsilon < totalUsed)
+                    {
+                        var ingredientName = pi.Ingredient?.IngredientName ?? pi.IngredientId.ToString();
+                        return OperationResult.Fail($"Not enough stock for ingredient {ingredientName}.");
+                    }
+
+                    storeInventory.StockQuantity -= totalUsed;
+                    storeInventory.LastUpdated = DateTime.UtcNow;
+
+                    var orderItemIngredient = new OrderItemIngredient
+                    {
+                        OrderItemId = orderItem.OrderItemId,
+                        IngredientId = pi.IngredientId,
+                        Quantity = totalUsed
+                    };
+                    _context.OrderItemIngredients.Add(orderItemIngredient);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return OperationResult.Success();
+        }
+
+        private async Task RemoveCartItemsForOrder(int orderId, int? customerId)
+        {
+            if (!customerId.HasValue) return;
+
+            var orderItems = await _context.OrderItems
+                .Where(oi => oi.OrderId == orderId)
+                .ToListAsync();
+
+            var productIds = orderItems.Where(oi => oi.ProductId.HasValue)
+                .Select(oi => oi.ProductId!.Value).Distinct().ToList();
+            var comboIds = orderItems.Where(oi => oi.ComboId.HasValue)
+                .Select(oi => oi.ComboId!.Value).Distinct().ToList();
+            var bowlIds = orderItems.Where(oi => oi.BowlId.HasValue)
+                .Select(oi => oi.BowlId!.Value).Distinct().ToList();
+
+            var cartItemsToRemove = await _context.CartItems
+                .Where(ci => ci.Cart.CustomerId == customerId.Value &&
+                             ((ci.ProductId.HasValue && productIds.Contains(ci.ProductId.Value)) ||
+                              (ci.ComboId.HasValue && comboIds.Contains(ci.ComboId.Value)) ||
+                              (ci.BowlId.HasValue && bowlIds.Contains(ci.BowlId.Value))))
+                .ToListAsync();
+
+            _context.CartItems.RemoveRange(cartItemsToRemove);
+
+            var cartIds = cartItemsToRemove.Select(ci => ci.CartId).Distinct();
+            var emptyCarts = await _context.Carts
+                .Where(c => cartIds.Contains(c.CartId) && !c.CartItems.Any())
+                .ToListAsync();
+
+            _context.Carts.RemoveRange(emptyCarts);
+
+            await _context.SaveChangesAsync();
+        }
+
     }
+
 
 
 }
