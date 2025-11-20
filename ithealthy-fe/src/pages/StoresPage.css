@@ -1,0 +1,132 @@
+.location-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 50vh;
+        }
+
+        .image-section {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .info-section {
+            background-color: #f5f0e8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .brand-name {
+            font-size: 48px;
+            font-weight: 300;
+            color: #5a1a3d;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .location-name {
+            font-size: 42px;
+            font-weight: 600;
+            color: #5a1a3d;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .find-us {
+            font-size: 13px;
+            font-weight: 700;
+            color: #5a1a3d;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .address {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            max-width: 500px;
+        }
+
+        .opening-hours-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #5a1a3d;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .hours {
+            font-size: 15px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* First section - image left, info right */
+        .location-section:nth-child(1) .image-section {
+            order: 1;
+        }
+
+        .location-section:nth-child(1) .info-section {
+            order: 2;
+        }
+
+        /* Second section - info left, image right */
+        .location-section:nth-child(2) .info-section {
+            order: 1;
+        }
+
+        .location-section:nth-child(2) .image-section {
+            order: 2;
+        }
+
+        @media (max-width: 968px) {
+            .location-section {
+                grid-template-columns: 1fr;
+            }
+
+            .image-section {
+                height: 40vh;
+            }
+
+            .brand-name {
+                font-size: 36px;
+            }
+
+            .location-name {
+                font-size: 30px;
+            }
+
+            .info-section {
+                padding: 40px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .brand-name {
+                font-size: 28px;
+            }
+
+            .location-name {
+                font-size: 24px;
+                margin-bottom: 30px;
+            }
+
+            .find-us, .opening-hours-title {
+                font-size: 12px;
+            }
+
+            .address, .hours {
+                font-size: 14px;
+            }
+        }
