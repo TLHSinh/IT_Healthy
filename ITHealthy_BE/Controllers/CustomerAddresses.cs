@@ -121,6 +121,25 @@ namespace ITHealthy.Controllers
             if (string.IsNullOrEmpty(request.ReceiverName) || string.IsNullOrEmpty(request.PhoneNumber))
                 return BadRequest(new { message = "Tên người nhận và số điện thoại là bắt buộc." });
 
+
+
+var parts = new List<string>
+    {
+        request.StreetAddress,
+        request.Ward,
+        request.District,
+        request.City
+    }.Where(s => !string.IsNullOrEmpty(s));
+
+    string fullAddress = string.Join(", ", parts);
+    if (string.IsNullOrEmpty(fullAddress))
+        return BadRequest(new { message = "Địa chỉ không hợp lệ." });
+
+    // Tự động lấy tọa độ (miễn phí 100% - haochaun.io)YY
+    var coordinates = await GeocodingService.GetCoordinatesAsync(fullAddress);
+
+
+
             var address = new CustomerAddress
             {
                 CustomerId = request.CustomerId,
@@ -139,6 +158,8 @@ namespace ITHealthy.Controllers
                 IsDefault = request.IsDefault ?? false,
                 CreatedAt = DateTime.Now
             };
+
+
 
             _context.CustomerAddresses.Add(address);
             await _context.SaveChangesAsync();

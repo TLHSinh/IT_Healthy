@@ -224,7 +224,6 @@ const Navbar = ({ onSubmenuToggle }) => {
                       <User size={18} /> Thông tin cá nhân
                     </button>
 
-
                     <button
                       className="dropdown-item"
                       onClick={() => navigate("/CustomerOrders")}
