@@ -224,6 +224,14 @@ const Navbar = ({ onSubmenuToggle }) => {
                       <User size={18} /> Thông tin cá nhân
                     </button>
 
+
+                    <button
+                      className="dropdown-item"
+                      onClick={() => navigate("/CustomerOrders")}
+                    >
+                      <User size={18} /> Đơn hàng của bạn
+                    </button>
+
                     <button className="dropdown-item" onClick={handleLogout}>
                       <LogOut size={18} /> Đăng xuất
                     </button>

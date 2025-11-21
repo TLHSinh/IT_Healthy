@@ -45,7 +45,13 @@ export default function CartPage() {
           headers: { Authorization: `Bearer ${user.token}` },
         }
       );
+
       setCart(res.data);
+
+      // 🔥 Lưu cartId vào localStorage
+      if (res.data && res.data.cartId) {
+        localStorage.setItem("cartId", res.data.cartId);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");

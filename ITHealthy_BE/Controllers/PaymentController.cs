@@ -23,6 +23,89 @@ namespace ITHealthy.Controllers
             _settings = options.Value;
         }
 
+        // ============================================
+        // CONFIRM MOMO PAYMENT (User-initiated)
+        // POST /api/payment/confirm-momo-payment
+        // ============================================
+        [HttpPost("confirm-momo-payment")]
+        public async Task<IActionResult> ConfirmMomoPayment([FromBody] ConfirmMomoPaymentRequest request)
+        {
+            Console.WriteLine($"=== Confirming MoMo Payment for Order {request.OrderId} ===");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var order = await _context.Orders
+                    .Include(o => o.Payments)
+                    .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
+
+                if (order == null)
+                {
+                    return NotFound(new { message = "Order not found" });
+                }
+
+                var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == "MOMO");
+                if (payment == null)
+                {
+                    return BadRequest(new { message = "MoMo payment not found" });
+                }
+
+                // Check if already processed
+                if (payment.Status == "Success")
+                {
+                    Console.WriteLine("⚠️ Payment already processed");
+                    return Ok(new { message = "Payment already confirmed", alreadyProcessed = true });
+                }
+
+                // Check MoMo result code
+                if (request.ResultCode != 0)
+                {
+                    payment.Status = "Failed";
+                    payment.PaymentDate = DateTime.UtcNow;
+                    order.StatusOrder = "Cancelled";
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "Payment failed", success = false });
+                }
+
+                // ==============================
+                // SUCCESS: Deduct inventory + Remove cart
+                // ==============================
+                var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
+                if (!invResult.IsSuccess)
+                {
+                    payment.Status = "Failed";
+                    order.StatusOrder = "Cancelled";
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return BadRequest(new { message = invResult.ErrorMessage, success = false });
+                }
+
+                await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
+
+                payment.Status = "Success";
+                payment.PaymentDate = DateTime.UtcNow;
+                order.InventoryDeducted = true;
+                order.StatusOrder = "Confirmed";
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                Console.WriteLine("✅ Payment confirmed successfully");
+                return Ok(new { message = "Payment confirmed successfully", success = true });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Console.WriteLine($"❌ EXCEPTION: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message, success = false });
+            }
+        }
+
         [HttpPost("momo-ipn")]
         public async Task<IActionResult> MomoIpn([FromBody] MomoIpnRequest request)
         {

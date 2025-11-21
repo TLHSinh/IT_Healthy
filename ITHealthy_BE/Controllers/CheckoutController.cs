@@ -248,8 +248,105 @@ namespace ITHealthy.Controllers
             await _context.SaveChangesAsync();
         }
 
+
+
+        [HttpPost("confirm-order")]
+        public async Task<IActionResult> ConfirmOrderAfterReturn([FromBody] ConfirmOrderRequest request)
+        {
+            if (request == null || request.OrderId <= 0 || request.CartId <= 0)
+                return BadRequest("orderId or cartId is missing.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var order = await _context.Orders
+                    .Include(o => o.OrderItems)
+                    .Include(o => o.Payments)
+                    .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
+
+                if (order == null)
+                    return NotFound("Order not found.");
+
+                // 🔥 1. Trừ kho nếu chưa trừ
+                if (order.InventoryDeducted != true)
+                {
+                    foreach (var item in order.OrderItems)
+                    {
+                        if (item.ProductId.HasValue)
+                        {
+                            var ingredients = await _context.ProductIngredients
+                                .Where(pi => pi.ProductId == item.ProductId.Value)
+                                .ToListAsync();
+
+                            foreach (var pi in ingredients)
+                            {
+                                var inventory = await _context.StoreInventories
+                                    .FirstOrDefaultAsync(si =>
+                                        si.StoreId == order.StoreId &&
+                                        si.IngredientId == pi.IngredientId);
+
+                                if (inventory == null)
+                                    return BadRequest($"Ingredient {pi.IngredientId} not found.");
+
+                                decimal used = Math.Round(pi.Quantity * item.Quantity, 2);
+                                decimal epsilon = 0.0001M;
+
+                                if ((inventory.StockQuantity ?? 0) + epsilon < used)
+                                    return BadRequest($"Not enough stock for ingredient {pi.IngredientId}");
+
+                                inventory.StockQuantity -= used;
+                                inventory.LastUpdated = DateTime.UtcNow;
+
+                                _context.OrderItemIngredients.Add(new OrderItemIngredient
+                                {
+                                    OrderItemId = item.OrderItemId,
+                                    IngredientId = pi.IngredientId,
+                                    Quantity = used
+                                });
+                            }
+                        }
+                    }
+
+                    order.InventoryDeducted = true;
+                }
+
+                // 🔥 2. Xoá đúng giỏ hàng được gửi lên (cartId)
+                var cart = await _context.Carts
+                    .Include(c => c.CartItems)
+                    .FirstOrDefaultAsync(c => c.CartId == request.CartId);
+
+                if (cart != null)
+                {
+                    _context.CartItems.RemoveRange(cart.CartItems);
+                    _context.Carts.Remove(cart);
+                }
+
+                // 🔥 3. Update Payment = Success
+                foreach (var pay in order.Payments)
+                {
+                    pay.Status = "Paid";
+                    pay.PaymentDate = DateTime.UtcNow;
+                }
+
+                // 🔥 4. Update Order Status = Completed
+                order.StatusOrder = "Pending";
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { message = "Order confirmed, inventory updated, cart removed, payment successful." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
     }
 
-
-
 }
+
+

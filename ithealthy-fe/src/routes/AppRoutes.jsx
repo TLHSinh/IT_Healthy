@@ -15,6 +15,8 @@ import CheckoutPage from "../pages/CheckoutPage";
 import OrderSuccessPage from "../pages/OrderSuccessPage";
 import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import UserBowlPage from "../pages/UserBowlPage";
+import CustomerOrdersPage from "../pages/CustomerOrdersPage";
+
 
 import MainLayout from "../layouts/MainLayout";
 
@@ -36,6 +38,8 @@ export default function AppRoutes() {
           <Route path="/OrderSuccess" element={<OrderSuccessPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/UserBowlPage" element={<UserBowlPage />} />
+          <Route path="/CustomerOrders" element={<CustomerOrdersPage />} />
+
         </Route>
 
         {/* Trang không có Navbar */}
