@@ -169,11 +169,14 @@ export default function PaymentSuccessPage() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-4 mt-8">
-            {isSuccess && !paymentConfirmed && (
+            {isSuccess && (
               <button
-                onClick={handlePostCheckout}
+                onClick={async () => {
+                  const ok = await handlePostCheckout();
+                  if (ok) navigate(`/CustomerOrders`);
+                }}
                 disabled={loading}
-                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -183,19 +186,9 @@ export default function PaymentSuccessPage() {
                 ) : (
                   <>
                     <Package size={20} />
-                    Xác nhận đơn hàng
+                    Xem đơn hàng
                   </>
                 )}
-              </button>
-            )}
-
-            {isSuccess && paymentConfirmed && (
-              <button
-                onClick={() => navigate(`/CustomerOrders`)}
-                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
-              >
-                <Package size={20} />
-                Xem đơn hàng
               </button>
             )}
 
