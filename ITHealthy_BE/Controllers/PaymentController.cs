@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
@@ -25,166 +26,131 @@ namespace ITHealthy.Controllers
         [HttpPost("momo-ipn")]
         public async Task<IActionResult> MomoIpn([FromBody] MomoIpnRequest request)
         {
+            Console.WriteLine("=== MoMo IPN Received ===");
+            Console.WriteLine(JsonSerializer.Serialize(request));
+
             try
             {
-                // Log IPN request for debugging
-                Console.WriteLine("=== MoMo IPN Received ===");
-                Console.WriteLine($"PartnerCode: {request.PartnerCode}");
-                Console.WriteLine($"OrderId: {request.OrderId}");
-                Console.WriteLine($"RequestId: {request.RequestId}");
-                Console.WriteLine($"Amount: {request.Amount}");
-                Console.WriteLine($"ResultCode: {request.ResultCode}");
-                Console.WriteLine($"Message: {request.Message}");
-                Console.WriteLine($"ExtraData: {request.ExtraData}");
-                Console.WriteLine($"Signature: {request.Signature}");
-                Console.WriteLine($"ResponseTime: {request.ResponseTime}");
-                Console.WriteLine($"TransId: {request.TransId}");
-                Console.WriteLine($"OrderType: {request.OrderType}");
-                Console.WriteLine("========================");
+                string rawSignature =
+    $"accessKey={_settings.AccessKey}" +
+    $"&amount={request.amount}" +
+    $"&extraData={request.extraData}" +
+    $"&message={request.message}" +
+    $"&orderId={request.orderId}" +
+    $"&orderInfo={request.orderInfo ?? ""}" +
+    $"&orderType={request.orderType ?? ""}" +
+    $"&partnerCode={request.partnerCode}" +
+    $"&payType={request.payType ?? ""}" +
+    $"&requestId={request.requestId}" +
+    $"&responseTime={request.responseTime ?? ""}" +
+    $"&resultCode={request.resultCode}" +
+    $"&transId={request.transId ?? ""}";
 
-                // 1. Verify signature theo format MoMo IPN
-                // Format: accessKey=...&amount=...&extraData=...&message=...&orderId=...&orderInfo=...&orderType=...&partnerCode=...&requestId=...&responseTime=...&resultCode=...&transId=...
-                var rawSignature =
-                    $"accessKey={_settings.AccessKey}" +
-                    $"&amount={request.Amount}" +
-                    $"&extraData={request.ExtraData}" +
-                    $"&message={request.Message}" +
-                    $"&orderId={request.OrderId}" +
-                    $"&orderInfo={request.orderInfo}" +
-                    $"&orderType={request.OrderType}" +
-                    $"&partnerCode={request.PartnerCode}" +
-                    $"&requestId={request.RequestId}" +
-                    $"&responseTime={request.ResponseTime}" +
-                    $"&resultCode={request.ResultCode}" +
-                    $"&transId={request.TransId}";
 
                 var expected = GetSignature(rawSignature, _settings.SecretKey);
-                
-                Console.WriteLine($"Expected Signature: {expected}");
-                Console.WriteLine($"Received Signature: {request.Signature}");
-
-                if (!string.Equals(expected, request.Signature, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(expected, request.signature, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("❌ Signature verification FAILED!");
-                    // Tạm thời bỏ qua signature check để test - XÓA DÒNG NÀY KHI PRODUCTION
-                    // return BadRequest("Invalid signature");
-                    Console.WriteLine("⚠️ WARNING: Signature check bypassed for testing!");
+                    Console.WriteLine("❌ Signature invalid");
+                    return BadRequest(new { message = "Invalid signature" });
                 }
-                else
-                {
-                    Console.WriteLine("✅ Signature verification SUCCESS!");
-                }
+                Console.WriteLine("✅ Signature OK");
 
-                // 2. Lấy orderId hệ thống từ extraData
-                if (!int.TryParse(request.ExtraData, out var systemOrderId))
-                {
-                    Console.WriteLine($"❌ Invalid extraData: {request.ExtraData}");
-                    return BadRequest("Invalid extraData");
-                }
+                Console.WriteLine("RAW SIGNATURE ===> " + rawSignature);
+                Console.WriteLine("EXPECTED SIGNATURE ===> " + expected);
+                Console.WriteLine("MOMO SIGNATURE ===> " + request.signature);
 
-                Console.WriteLine($"System OrderId: {systemOrderId}");
+
+                // ==============================
+                // 2️⃣ DECODE extraData -> ORDERID
+                // ==============================
+                string decodedExtra = Encoding.UTF8.GetString(Convert.FromBase64String(request.extraData));
+
+                if (!int.TryParse(decodedExtra, out int systemOrderId))
+                {
+                    return BadRequest(new { message = "Invalid extraData" });
+                }
+                Console.WriteLine($"🆔 SYSTEM ORDERID: {systemOrderId}");
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+
+                var order = await _context.Orders
+                    .Include(o => o.Payments)
+                    .FirstOrDefaultAsync(o => o.OrderId == systemOrderId);
+
+                if (order == null)
                 {
-                    var order = await _context.Orders
-                        .Include(o => o.Payments)
-                        .FirstOrDefaultAsync(o => o.OrderId == systemOrderId);
+                    return NotFound(new { message = "Order not found" });
+                }
 
-                    if (order == null)
-                    {
-                        Console.WriteLine($"❌ Order not found: {systemOrderId}");
-                        return NotFound("Order not found.");
-                    }
+                var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == "MOMO");
+                if (payment == null)
+                {
+                    return BadRequest(new { message = "MoMo payment not found" });
+                }
 
-                    var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == "MOMO");
-                    if (payment == null)
-                    {
-                        Console.WriteLine($"❌ MoMo payment not found for order: {systemOrderId}");
-                        return BadRequest("MoMo payment not found.");
-                    }
-
-                    Console.WriteLine($"Current payment status: {payment.Status}");
-
+                // ==============================
+                // 3️⃣ IF SUCCESS -> UPDATE STATUS
+                // ==============================
+                if (request.resultCode == 0)
+                {
                     if (payment.Status == "Success")
                     {
-                        Console.WriteLine("ℹ️ Payment already processed successfully");
-                        await transaction.CommitAsync();
+                        Console.WriteLine("⚠️ Payment already processed");
                         return Ok(new { message = "Already processed" });
                     }
 
-                    if (request.ResultCode == 0) // thanh toán thành công
+                    var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
+                    if (!invResult.IsSuccess)
                     {
-                        Console.WriteLine("💰 Processing successful payment...");
-                        
-                        var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
-                        if (!invResult.IsSuccess)
-                        {
-                            Console.WriteLine($"❌ Inventory deduction failed: {invResult.ErrorMessage}");
-                            payment.Status = "Failed";
-                            order.StatusOrder = "Cancelled";
-                            await _context.SaveChangesAsync();
-                            await transaction.CommitAsync();
-
-                            return BadRequest(invResult.ErrorMessage);
-                        }
-
-                        Console.WriteLine("✅ Inventory deducted successfully");
-
-                        await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
-                        Console.WriteLine("✅ Cart items removed successfully");
-
-                        payment.Status = "Success";
-                        payment.PaymentDate = DateTime.UtcNow;
-                        order.InventoryDeducted = true;
-                        order.StatusOrder = "Confirmed";
-
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
-
-                        Console.WriteLine("✅ Payment processed successfully!");
-                        return Ok(new { message = "Payment success" });
-                    }
-                    else
-                    {
-                        // thanh toán thất bại
-                        Console.WriteLine($"❌ Payment failed with ResultCode: {request.ResultCode}");
                         payment.Status = "Failed";
-                        payment.PaymentDate = DateTime.UtcNow;
                         order.StatusOrder = "Cancelled";
-
                         await _context.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        return Ok(new { message = "Payment failed" });
+                        return BadRequest(invResult.ErrorMessage);
                     }
+
+                    await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
+
+                    payment.Status = "Success";
+                    payment.PaymentDate = DateTime.UtcNow;
+                    order.InventoryDeducted = true;
+                    order.StatusOrder = "Confirmed";
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "Payment success" });
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine($"❌ Exception in transaction: {ex.Message}");
-                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                    await transaction.RollbackAsync();
-                    return StatusCode(500, $"Handle IPN failed: {ex.Message}");
+                    payment.Status = "Failed";
+                    payment.PaymentDate = DateTime.UtcNow;
+                    order.StatusOrder = "Cancelled";
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "Payment failed" });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Fatal exception in MomoIpn: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                return StatusCode(500, $"IPN processing failed: {ex.Message}");
+                Console.WriteLine($"❌ EXCEPTION: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
             }
         }
-
         private static string GetSignature(string text, string key)
         {
-            var encoding = new ASCIIEncoding();
-            byte[] textBytes = encoding.GetBytes(text);
-            byte[] keyBytes = encoding.GetBytes(key);
+            byte[] textBytes = Encoding.UTF8.GetBytes(text);
+            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
 
             using var hmac = new HMACSHA256(keyBytes);
-            byte[] hashBytes = hmac.ComputeHash(textBytes);
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+            return BitConverter.ToString(hmac.ComputeHash(textBytes))
+                               .Replace("-", "")
+                               .ToLower();
         }
+
 
 
         [HttpGet("redirect-success")]

@@ -100,7 +100,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+Console.WriteLine("Backend running on: " + builder.Configuration["ASPNETCORE_URLS"]);
+
+
+//app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

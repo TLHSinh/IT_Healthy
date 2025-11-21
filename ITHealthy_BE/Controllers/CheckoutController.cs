@@ -125,7 +125,7 @@ namespace ITHealthy.Controllers
                 else if (request.PaymentMethod == "MOMO")
                 {
                     // MOMO: tạo payment link, KHÔNG trừ kho, KHÔNG xóa cart
-                    var description = $"Thanh toán đơn hàng #{order.OrderId}";
+                    var description = $"Thanh toán đơn hàng {order.OrderId}";
                     var extraData = order.OrderId.ToString(); // để IPN quay về nhận diện
 
                     var momoResponse = await _momoService.CreatePaymentAsync(

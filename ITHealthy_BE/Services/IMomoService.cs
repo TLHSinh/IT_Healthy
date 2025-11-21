@@ -48,7 +48,8 @@ public class MomoService : IMomoService
             requestType = "captureWallet"
         };
 
-        // rawSignature phải đúng thứ tự theo tài liệu QuickPay
+        // rawSignature phải đúng thứ tự ALPHABET theo yêu cầu của MoMo
+        // Thứ tự: accessKey, amount, extraData, ipnUrl, orderId, orderInfo, partnerCode, redirectUrl, requestId, requestType
         var rawSignature =
             $"accessKey={_settings.AccessKey}" +
             $"&amount={request.amount}" +
