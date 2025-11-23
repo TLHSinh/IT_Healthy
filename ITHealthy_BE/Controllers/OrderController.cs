@@ -79,6 +79,7 @@ namespace ITHealthy.Controllers
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByCustomer(int customerId)
         {
             var orders = await _context.Orders
+                .Where(o => o.CustomerId == customerId) // ← Filter theo customerId
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
@@ -106,7 +107,6 @@ namespace ITHealthy.Controllers
                     Country = o.Store != null ? o.Store.Country : null,
                     Postcode = o.Store != null ? o.Store.Postcode : null,
 
-
                     OrderItems = o.OrderItems.Select(oi => new OrderItemDTO
                     {
                         OrderItemId = oi.OrderItemId,
@@ -116,7 +116,6 @@ namespace ITHealthy.Controllers
                         Quantity = oi.Quantity,
                         UnitPrice = oi.UnitPrice,
                         TotalPrice = oi.TotalPrice,
-
                         ProductName = oi.Product != null ? oi.Product.ProductName : null,
                         ComboName = oi.Combo != null ? oi.Combo.ComboName : null,
                         BowlName = oi.Bowl != null ? oi.Bowl.BowlName : null
@@ -126,6 +125,7 @@ namespace ITHealthy.Controllers
 
             return Ok(orders);
         }
+
 
 
         //  http://localhost:5000/api/orders/filter?status=paid&type=shipping

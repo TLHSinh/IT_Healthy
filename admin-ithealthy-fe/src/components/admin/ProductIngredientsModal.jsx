@@ -14,7 +14,9 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
 
   const fetchIngredients = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/Ingredient");
+      const res = await axios.get(
+        "http://localhost:5000/api/ingredient/all-ingredients"
+      );
       setIngredients(res.data || []);
     } catch {
       toast.error("Không thể tải danh sách nguyên liệu!");
@@ -71,7 +73,8 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
     try {
       await axios.put(`http://localhost:5000/api/ProductIngredients/${piId}`, {
         productId: editItem.productId,
-        ingredientId: data.find((x) => x.productIngredientId === piId)?.ingredientId,
+        ingredientId: data.find((x) => x.productIngredientId === piId)
+          ?.ingredientId,
         quantity: newQty,
       });
       toast.success("Cập nhật thành công!");
@@ -85,7 +88,9 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
   const handleDelete = async (piId) => {
     try {
       setLoading(true);
-      await axios.delete(`http://localhost:5000/api/ProductIngredients/${piId}`);
+      await axios.delete(
+        `http://localhost:5000/api/ProductIngredients/${piId}`
+      );
       toast.success("Xóa thành công!");
       await fetchProductIngredients();
       onSuccess?.("delete");
@@ -170,8 +175,17 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
           bordered
           className="shadow-sm rounded-lg"
           columns={[
-            { title: "STT", render: (_, __, index) => index + 1, width: 60, align: "center" },
-            { title: "Nguyên liệu", dataIndex: "ingredientName", key: "ingredientName" },
+            {
+              title: "STT",
+              render: (_, __, index) => index + 1,
+              width: 60,
+              align: "center",
+            },
+            {
+              title: "Nguyên liệu",
+              dataIndex: "ingredientName",
+              key: "ingredientName",
+            },
             {
               title: "Số lượng",
               key: "quantity",
@@ -180,7 +194,9 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
                   min={0.01}
                   step={0.01}
                   value={record.quantity}
-                  onChange={(val) => handleUpdateQuantity(record.productIngredientId, val)}
+                  onChange={(val) =>
+                    handleUpdateQuantity(record.productIngredientId, val)
+                  }
                 />
               ),
             },

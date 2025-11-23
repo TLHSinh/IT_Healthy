@@ -23,6 +23,8 @@ import {
   Phone,
   Store,
 } from "lucide-react";
+import { AuthContext } from "../context/AuthContext"; // chỉnh path nếu cần
+import { useContext } from "react";
 
 /* ----------------------------- Helper ----------------------------- */
 const fmtCurrency = (v) => Number(v).toLocaleString("vi-VN");
@@ -154,12 +156,13 @@ const CustomerOrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const printRef = useRef(null);
+  const { user } = useContext(AuthContext);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/orders/by-customer/1"
+        `http://localhost:5000/api/orders/by-customer/${user.customerId}`
       );
       setOrders(res.data || []);
     } catch (err) {
