@@ -14,7 +14,7 @@ const ProductIngredientsModal = ({ isOpen, onClose, onSuccess, editItem }) => {
 
   const fetchIngredients = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/Ingredient");
+      const res = await axios.get("http://localhost:5000/api/ingredient/all-ingredients");
       setIngredients(res.data || []);
     } catch {
       toast.error("Không thể tải danh sách nguyên liệu!");
