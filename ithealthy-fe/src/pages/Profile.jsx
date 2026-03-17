@@ -400,119 +400,108 @@ const Profile = () => {
       </div>
     );
 
-  return (
-    <>
-      <div className="max-w-3xl mx-auto p-6 md:p-8 bg-white rounded-2xl shadow-xl mt-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Thông tin cá nhân
-            </h1>
-            <p className="text-sm text-gray-500">
-              Quản lý hồ sơ và bảo mật tài khoản của bạn
-            </p>
-          </div>
-          <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-            {profile.roleUser}
-          </span>
-        </div>
+return (
+  <>
+    <div >
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Tài khoản của tôi</h1>
+        <p className="text-sm text-gray-500">
+          Quản lý thông tin cá nhân & bảo mật
+        </p>
+      </div>
 
-        {/* Avatar + name */}
-        <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
+      {/* Main Card */}
+      <div className="bg-white rounded-2xl shadow overflow-hidden">
+        {/* Top */}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 p-6 border-b">
           <img
             src={profile.avatar}
             alt="Avatar"
-            className="w-28 h-28 rounded-full object-cover border border-gray-200 shadow-sm"
+            className="w-28 h-28 rounded-full object-cover border shadow"
           />
-          <div className="flex flex-col gap-2 text-center sm:text-left">
-            <p className="font-semibold text-lg text-gray-800">
-              {profile.fullName}
-            </p>
-            <p className="text-sm text-gray-500">{profile.email}</p>
-            <button
-              onClick={() => setIsEditOpen(true)}
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
-            >
-              <Edit3 size={16} className="mr-2" />
-              Chỉnh sửa hồ sơ
-            </button>
+
+          <div className="flex-1 text-center md:text-left">
+            <h2 className="text-xl font-semibold">{profile.fullName}</h2>
+            <p className="text-gray-500 text-sm">{profile.email}</p>
+
+            <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+              <span className="px-3 py-1 text-xs rounded-full bg-indigo-50 text-indigo-600">
+                {profile.roleUser}
+              </span>
+              <span
+                className={`px-3 py-1 text-xs rounded-full ${
+                  profile.isActive
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-red-50 text-red-600"
+                }`}
+              >
+                {profile.isActive ? "Đang hoạt động" : "Đã khóa"}
+              </span>
+            </div>
           </div>
+
+          <button
+            onClick={() => setIsEditOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
+          >
+            <Edit3 size={16} />
+            Chỉnh sửa
+          </button>
         </div>
 
-        {/* Info grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">Họ tên</p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.fullName}
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">Email</p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.email}
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">
-              Số điện thoại
-            </p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.phone}
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">
-              Giới tính
-            </p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.gender === "M"
+        {/* Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+          {[
+            ["Họ tên", profile.fullName],
+            ["Email", profile.email],
+            ["Số điện thoại", profile.phone],
+            [
+              "Giới tính",
+              profile.gender === "M"
                 ? "Nam"
                 : profile.gender === "F"
                 ? "Nữ"
-                : "Khác"}
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">
-              Ngày sinh
-            </p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.dob?.slice(0, 10)}
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-gray-500 mb-1">
-              Trạng thái
-            </p>
-            <p className="border border-gray-200 p-3 rounded-lg bg-gray-50">
-              {profile.isActive ? "Đang hoạt động" : "Đã khóa"}
-            </p>
-          </div>
+                : "Khác",
+            ],
+            ["Ngày sinh", profile.dob?.slice(0, 10) || "—"],
+            [
+              "Trạng thái",
+              profile.isActive ? "Đang hoạt động" : "Đã khóa",
+            ],
+          ].map(([label, value], i) => (
+            <div key={i}>
+              <p className="text-sm text-gray-500 mb-1">{label}</p>
+              <div className="bg-gray-50 border rounded-xl px-4 py-3 text-gray-800">
+                {value}
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Update Button */}
-        <div className="mt-8">
+        {/* Bottom Action */}
+        <div className="p-6 border-t flex justify-end">
           <button
             onClick={() => setIsEditOpen(true)}
-            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-lg w-full md:w-auto font-semibold shadow-md transition"
+            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold shadow"
           >
             Cập nhật thông tin
           </button>
         </div>
       </div>
+    </div>
 
-      {/* Modal */}
-      <EditProfileModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        profile={profile}
-        customerId={customerId}
-        onUpdated={(u) => setProfile(u)}
-      />
-    </>
-  );
+    {/* Modal */}
+    <EditProfileModal
+      isOpen={isEditOpen}
+      onClose={() => setIsEditOpen(false)}
+      profile={profile}
+      customerId={customerId}
+      onUpdated={(u) => setProfile(u)}
+    />
+  </>
+);
+
 };
 
 export default Profile;

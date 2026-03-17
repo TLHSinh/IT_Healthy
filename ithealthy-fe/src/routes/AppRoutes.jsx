@@ -16,9 +16,13 @@ import OrderSuccessPage from "../pages/OrderSuccessPage";
 import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import UserBowlPage from "../pages/UserBowlPage";
 import CustomerOrdersPage from "../pages/CustomerOrdersPage";
+import Farvorite from "../pages/Farvorite";
+
 import Profile from "../pages/Profile";
 
 import MainLayout from "../layouts/MainLayout";
+
+import AccountLayout from "../layouts/AccountLayout";
 
 export default function AppRoutes() {
   return (
@@ -33,13 +37,20 @@ export default function AppRoutes() {
           <Route path="/stores" element={<StoresPage />} />
           <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/createyourbowl" element={<CreateYourBowlPage />} />
-          <Route path="/Carts" element={<CartsPage />} />
-          <Route path="/Checkout" element={<CheckoutPage />} />
-          <Route path="/OrderSuccess" element={<OrderSuccessPage />} />
+          <Route path="/carts" element={<CartsPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/ordersuccess" element={<OrderSuccessPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
-          <Route path="/UserBowlPage" element={<UserBowlPage />} />
-          <Route path="/CustomerOrders" element={<CustomerOrdersPage />} />
-          <Route path="/Profile" element={<Profile />} />
+          <Route path="/userbowlpage" element={<UserBowlPage />} />
+
+          {/* ===== ACCOUNT PAGES (CÓ SIDEBAR) ===== */}
+          <Route element={<AccountLayout />}>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/customerorders" element={<CustomerOrdersPage />} />
+            <Route path="/farvorite" element={<Farvorite />} />
+
+            
+          </Route>
         </Route>
 
         {/* Trang không có Navbar */}

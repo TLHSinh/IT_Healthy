@@ -1,20 +1,18 @@
-// CustomerOrdersPage.jsx
 import React, {
   useState,
   useEffect,
   useMemo,
   useRef,
   useCallback,
+  useContext,
 } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   List,
-  Grid,
   Search,
   X,
-  RefreshCcw,
   Printer,
   User,
   MapPin,
@@ -23,38 +21,36 @@ import {
   Phone,
   Store,
 } from "lucide-react";
-import { AuthContext } from "../context/AuthContext"; // chỉnh path nếu cần
-import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
-/* ----------------------------- Helper ----------------------------- */
+
+// mau trang thái
+const statusStyle = (status) => {
+  switch (status) {
+    case "Pending":
+      return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    case "Processing":
+      return "bg-blue-100 text-blue-700 border-blue-300";
+    case "Completed":
+      return "bg-green-100 text-green-700 border-green-300";
+    case "Cancelled":
+      return "bg-red-100 text-red-700 border-red-300";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-300";
+  }
+};
+/* ================= Helper ================= */
 const fmtCurrency = (v) => Number(v).toLocaleString("vi-VN");
 const safeDate = (d) => (d ? new Date(d).toLocaleString() : "—");
 
-/* ----------------------------- Skeleton Row ----------------------------- */
-const SkeletonRow = () => (
-  <tr className="animate-pulse">
-    {Array.from({ length: 6 }).map((_, i) => (
-      <td key={i} className="py-4 px-4">
-        <div className="h-4 bg-gray-200 rounded w-full" />
-      </td>
-    ))}
-  </tr>
-);
-
-/* ----------------------------- Modal ----------------------------- */
+/* ================= Modal ================= */
 const OrderModal = ({ order, onClose, printRef }) => {
   if (!order) return null;
 
-  const totalProducts = (order.orderItems || []).reduce(
-    (sum, item) => sum + (item.totalPrice ?? item.unitPrice ?? 0),
+  const total = order.orderItems?.reduce(
+    (s, i) => s + i.unitPrice * i.quantity,
     0
   );
-
-  const discount = Math.max(
-    0,
-    totalProducts - (order.finalPrice ?? totalProducts)
-  );
-  const finalPrice = order.finalPrice ?? totalProducts;
 
   return (
     <AnimatePresence>
@@ -66,67 +62,65 @@ const OrderModal = ({ order, onClose, printRef }) => {
       >
         <motion.div
           ref={printRef}
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto"
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          exit={{ scale: 0.95 }}
+          className="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex justify-between items-center p-6 border-b">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <List size={22} /> Chi tiết đơn #{order.orderId}
+          <div className="flex items-center justify-between p-5 border-b">
+            <h2 className="font-bold text-xl flex items-center gap-2">
+              <List size={20} /> Đơn hàng #{order.orderId}
             </h2>
             <button onClick={onClose}>
-              <X size={24} />
+              <X />
             </button>
           </div>
 
-          <div className="p-6 space-y-6 text-gray-700">
+          {/* Content */}
+          <div className="p-6 space-y-6 text-sm">
             {/* Info */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <User size={16} /> Khách hàng: {order.fullName}
+            <div className="grid grid-cols-2 gap-4 text-gray-700">
+              <div className="flex gap-2">
+                <User size={16} /> {order.fullName}
               </div>
-              <div className="flex items-center gap-2">
-                <Phone size={16} /> SĐT: {order.phoneNumber}
+              <div className="flex gap-2">
+                <Phone size={16} /> {order.phoneNumber}
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar size={16} /> Ngày đặt: {safeDate(order.orderDate)}
+              <div className="flex gap-2">
+                <Calendar size={16} /> {safeDate(order.orderDate)}
               </div>
-              <div className="flex items-center gap-2">
-                <Store size={16} /> Cửa hàng: {order.storeName}
+              <div className="flex gap-2">
+                <Store size={16} /> {order.storeName}
               </div>
-              <div className="col-span-2 flex items-center gap-2">
-                <MapPin size={16} /> Địa chỉ:{" "}
+              <div className="col-span-2 flex gap-2">
+                <MapPin size={16} />{" "}
                 {`${order.streetAddress}, ${order.ward}, ${order.district}, ${order.city}`}
               </div>
-              <div className="flex items-center gap-2">
-                <BadgeCheck size={16} /> Trạng thái: {order.statusOrder}
+              <div className="flex gap-2">
+                <BadgeCheck size={16} /> {order.statusOrder}
               </div>
             </div>
 
             {/* Products */}
             <div>
-              <h3 className="text-lg font-semibold mb-2">Sản phẩm</h3>
+              <h3 className="font-semibold mb-2">Sản phẩm</h3>
               <table className="w-full border rounded-xl overflow-hidden">
-                <thead className="bg-gray-100 text-sm">
+                <thead className="bg-gray-100">
                   <tr>
-                    <th className="py-2 px-3 border">#</th>
-                    <th className="py-2 px-3 border text-left">Tên SP</th>
-                    <th className="py-2 px-3 border">SL</th>
-                    <th className="py-2 px-3 border text-right">Giá</th>
+                    <th className="p-2">#</th>
+                    <th className="p-2 text-left">Tên</th>
+                    <th className="p-2">SL</th>
+                    <th className="p-2 text-right">Giá</th>
                   </tr>
                 </thead>
                 <tbody>
                   {order.orderItems?.map((p, i) => (
-                    <tr
-                      key={i}
-                      className="border-b hover:bg-gray-50 transition"
-                    >
-                      <td className="py-2 px-3 text-center">{i + 1}</td>
-                      <td className="py-2 px-3">{p.productName}</td>
-                      <td className="py-2 px-3 text-center">{p.quantity}</td>
-                      <td className="py-2 px-3 text-right">
+                    <tr key={i} className="border-t">
+                      <td className="p-2 text-center">{i + 1}</td>
+                      <td className="p-2">{p.productName}</td>
+                      <td className="p-2 text-center">{p.quantity}</td>
+                      <td className="p-2 text-right">
                         {fmtCurrency(p.unitPrice)}₫
                       </td>
                     </tr>
@@ -136,10 +130,8 @@ const OrderModal = ({ order, onClose, printRef }) => {
             </div>
 
             {/* Total */}
-            <div className="flex justify-end gap-6 text-lg font-semibold">
-              <div>Tổng: {fmtCurrency(totalProducts)}₫</div>
-              {discount > 0 && <div>Giảm: -{fmtCurrency(discount)}₫</div>}
-              <div>Khách trả: {fmtCurrency(finalPrice)}₫</div>
+            <div className="flex justify-end font-semibold text-lg">
+              Tổng: {fmtCurrency(order.finalPrice ?? total)}₫
             </div>
           </div>
         </motion.div>
@@ -148,15 +140,14 @@ const OrderModal = ({ order, onClose, printRef }) => {
   );
 };
 
-/* ----------------------------- Main Page ----------------------------- */
-const CustomerOrdersPage = () => {
+/* ================= Page ================= */
+export default function CustomerOrdersPage() {
+  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
-  const [viewMode, setViewMode] = useState("table");
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const printRef = useRef(null);
-  const { user } = useContext(AuthContext);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -165,13 +156,12 @@ const CustomerOrdersPage = () => {
         `http://localhost:5000/api/orders/by-customer/${user.customerId}`
       );
       setOrders(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Không thể tải đơn hàng");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user.customerId]);
 
   useEffect(() => {
     fetchOrders();
@@ -180,7 +170,7 @@ const CustomerOrdersPage = () => {
   const filtered = useMemo(() => {
     if (!searchTerm) return orders;
     return orders.filter((o) =>
-      o.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+      o.orderId.toString().includes(searchTerm)
     );
   }, [orders, searchTerm]);
 
@@ -193,182 +183,119 @@ const CustomerOrdersPage = () => {
   };
 
   return (
-    <div className="p-6 bg-[#F8F4E9] min-h-screen">
+    <div>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-800">
-            Đơn hàng của tôi
-          </h1>
-          <p className="text-sm text-gray-500">Quản lý đơn hàng</p>
-        </div>
-
-        {/* Search + Refresh + View Mode */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center w-full sm:w-80 bg-white border rounded-2xl shadow-sm overflow-hidden">
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-4 py-2 w-full outline-none bg-transparent text-sm"
-              placeholder="Tìm khách hàng..."
-            />
-            <div className="px-3 text-gray-500">
-              <Search size={18} />
-            </div>
-          </div>
-
-          <button
-            onClick={fetchOrders}
-            className="px-3 py-2 bg-white border rounded-lg shadow-sm hover:shadow-md flex items-center gap-2"
-          >
-            <RefreshCcw size={16} /> Làm mới
-          </button>
-
-          <div className="flex items-center gap-2 border rounded-full overflow-hidden">
-            <button
-              onClick={() => setViewMode("table")}
-              className={`px-3 py-2 ${
-                viewMode === "table" ? "bg-blue-600 text-white" : "bg-white"
-              }`}
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode("card")}
-              className={`px-3 py-2 ${
-                viewMode === "card" ? "bg-blue-600 text-white" : "bg-white"
-              }`}
-            >
-              <Grid size={16} />
-            </button>
-          </div>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Lịch sử đơn hàng</h1>
+        <p className="text-sm text-gray-500">
+          Theo dõi các đơn hàng bạn đã đặt
+        </p>
       </div>
 
-      {/* LIST VIEW */}
-      <AnimatePresence mode="wait">
-        {loading ? (
-          /* Loading Skeleton */
-          <motion.div className="overflow-x-auto bg-white rounded-2xl shadow p-4">
-            <table className="min-w-full">
-              <tbody>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <SkeletonRow key={i} />
-                ))}
-              </tbody>
-            </table>
-          </motion.div>
-        ) : viewMode === "table" ? (
-          <motion.div
-            key="table"
-            className="overflow-x-auto bg-white rounded-2xl shadow p-2"
+      {/* Filter */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="flex items-center bg-white border rounded-xl px-3 w-64">
+          <Search size={16} className="text-gray-400" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Mã đơn hàng"
+            className="px-2 py-2 w-full outline-none text-sm"
+          />
+        </div>
+        <button
+          onClick={fetchOrders}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm"
+        >
+          Làm mới
+        </button>
+      </div>
+
+      {/* Table */}
+<div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+  <table className="w-full text-sm">
+    <thead className="bg-gray-50 border-b">
+      <tr>
+        <th className="p-4 text-left font-semibold text-gray-600">Ngày</th>
+        <th className="p-4 text-center font-semibold text-gray-600">Mã</th>
+        <th className="p-4 text-right font-semibold text-gray-600">Tổng</th>
+        <th className="p-4 text-center font-semibold text-gray-600">
+          Trạng thái
+        </th>
+        <th className="p-4 text-center font-semibold text-gray-600">
+          Thao tác
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {loading ? (
+        <tr>
+          <td colSpan={5} className="p-8 text-center text-gray-500">
+            Đang tải dữ liệu...
+          </td>
+        </tr>
+      ) : filtered.length === 0 ? (
+        <tr>
+          <td colSpan={5} className="p-8 text-center text-gray-400">
+            Không có đơn hàng
+          </td>
+        </tr>
+      ) : (
+        filtered.map((o) => (
+          <tr
+            key={o.orderId}
+            className="border-b last:border-none hover:bg-gray-50 transition"
           >
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-3">#</th>
-                  <th className="py-2 px-3">Khách hàng</th>
-                  <th className="py-2 px-3">Ngày đặt</th>
-                  <th className="py-2 px-3">Giá trị</th>
-                  <th className="py-2 px-3">Trạng thái</th>
-                  <th className="py-2 px-3">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-4 text-center text-gray-500">
-                      Không có đơn hàng nào.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((o, i) => (
-                    <tr
-                      key={o.orderId}
-                      className="border-b hover:bg-gray-50 transition"
-                    >
-                      <td className="py-2 px-3 text-center">{i + 1}</td>
-                      <td className="py-2 px-3">{o.fullName}</td>
-                      <td className="py-2 px-3">{safeDate(o.orderDate)}</td>
-                      <td className="py-2 px-3">
-                        {fmtCurrency(o.finalPrice)}₫
-                      </td>
-                      <td className="py-2 px-3">{o.statusOrder}</td>
-                      <td className="py-2 px-3 flex gap-2">
-                        <button
-                          onClick={() => setSelectedOrder(o)}
-                          className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm"
-                        >
-                          Xem
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedOrder(o);
-                            setTimeout(handlePrint, 200);
-                          }}
-                          className="px-2 py-1 bg-white border rounded-full"
-                        >
-                          <Printer size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </motion.div>
-        ) : (
-          /* Card View */
-          <motion.div
-            key="card"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {filtered.length === 0 ? (
-              <div className="col-span-full p-6 text-center bg-white rounded-2xl shadow text-gray-500">
-                Không có đơn hàng nào.
-              </div>
-            ) : (
-              filtered.map((o) => (
-                <motion.div
-                  key={o.orderId}
-                  whileHover={{ y: -4 }}
-                  className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100"
+            <td className="p-4 whitespace-nowrap">
+              {safeDate(o.orderDate)}
+            </td>
+
+            <td className="p-4 text-center font-medium text-gray-700">
+              #{o.orderId}
+            </td>
+
+            <td className="p-4 text-right font-semibold">
+              {fmtCurrency(o.finalPrice)}₫
+            </td>
+
+            <td className="p-4 text-center">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${statusStyle(
+                  o.statusOrder
+                )}`}
+              >
+                {o.statusOrder}
+              </span>
+            </td>
+
+            <td className="p-4">
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => setSelectedOrder(o)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-medium transition"
                 >
-                  <div className="text-lg font-bold">{o.fullName}</div>
-                  <div className="text-gray-700 mt-1">
-                    Giá trị:{" "}
-                    <span className="font-semibold">
-                      {fmtCurrency(o.finalPrice)}₫
-                    </span>
-                  </div>
+                  Xem
+                </button>
 
-                  <div className="text-gray-500 text-sm mt-1">
-                    Ngày đặt: {safeDate(o.orderDate)}
-                  </div>
-
-                  <div className="mt-4 flex justify-between">
-                    <button
-                      onClick={() => setSelectedOrder(o)}
-                      className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm"
-                    >
-                      Xem
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedOrder(o);
-                        setTimeout(handlePrint, 200);
-                      }}
-                      className="px-2 py-1 bg-white border rounded-full text-sm"
-                    >
-                      <Printer size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <button
+                  onClick={() => {
+                    setSelectedOrder(o);
+                    setTimeout(handlePrint, 200);
+                  }}
+                  className="px-3 py-1.5 border rounded-full hover:bg-gray-100 transition"
+                  title="In đơn"
+                >
+                  <Printer size={14} />
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
 
       <OrderModal
         order={selectedOrder}
@@ -377,6 +304,4 @@ const CustomerOrdersPage = () => {
       />
     </div>
   );
-};
-
-export default CustomerOrdersPage;
+}
