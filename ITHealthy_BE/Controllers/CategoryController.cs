@@ -2,6 +2,7 @@ using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,6 +73,7 @@ namespace ITHealthy.Controllers
             return Ok(cateIng);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("category_pro")]
         public async Task<IActionResult> CreateCatePro([FromBody] Category catePro)
         {
@@ -86,6 +88,7 @@ namespace ITHealthy.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("category_ing")]
         public async Task<IActionResult> CreateCateIng([FromBody] CategoriesIngredient cateIng)
         {
@@ -100,6 +103,7 @@ namespace ITHealthy.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("category_pro/{id}")]
         public async Task<IActionResult> UpdateCatePro(int id, [FromBody] Category catePro)
         {
@@ -115,6 +119,7 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Cập nhật loại sản phẩm thành công!", categoryPro });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("category_ing/{id}")]
         public async Task<IActionResult> UpdateCateIng(int id, [FromBody] CategoriesIngredient cateIng)
         {
@@ -130,6 +135,7 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Cập nhật loại nguyên liệu thành công!", categoryIng });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("category_pro/{id}")]
         public async Task<IActionResult> DeleteCatePro(int id)
         {
@@ -143,6 +149,7 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Đã xóa loại sản phẩm thành công!" });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("category_ing/{id}")]
         public async Task<IActionResult> DeleteCateIng(int id)
         {

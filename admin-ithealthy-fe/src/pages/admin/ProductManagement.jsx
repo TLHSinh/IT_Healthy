@@ -1,10 +1,21 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { adminApi } from "../../api/adminApi";
-import { PlusCircle, Trash2, Edit2, RefreshCcw, Package, Grid, List, Search } from "lucide-react";
+import {
+  PlusCircle,
+  Trash2,
+  Edit2,
+  RefreshCcw,
+  Package,
+  Grid,
+  List,
+  Search,
+  Eye,
+} from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import ProductModal from "../../components/admin/ProductModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import ProductIngredientsModal from "../../components/admin/ProductIngredientsModal"; // modal quản lý nguyên liệu
+import ProductDetailModal from "../../components/admin/ProductDetailModal";
 
 const PAGE_SIZE = 8;
 
@@ -16,10 +27,13 @@ const ProductManagement = () => {
   const [page, setPage] = useState(1);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); 
+  const [viewMode, setViewMode] = useState("table");
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
-  
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   // modal quản lý nguyên liệu
   const [ingredientsModalOpen, setIngredientsModalOpen] = useState(false);
   const [productForIngredients, setProductForIngredients] = useState(null);
@@ -52,6 +66,25 @@ const ProductManagement = () => {
     setModalOpen(true);
   };
 
+  const handleViewDetail = async (product) => {
+    setSelectedProduct(product);
+    setDetailModalOpen(true);
+    setDetailLoading(true);
+
+    try {
+      const res = await adminApi.getProductById(product.productId);
+      const data = res.data || res;
+      if (data) {
+        setSelectedProduct((prev) => ({ ...prev, ...data }));
+      }
+    } catch (err) {
+      console.error("Lỗi lấy chi tiết sản phẩm:", err);
+      toast.error("Không thể tải chi tiết sản phẩm, đang hiển thị dữ liệu hiện có.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!productToDelete) return;
     const id = productToDelete.productId;
@@ -60,10 +93,35 @@ const ProductManagement = () => {
       setLoading(true);
       await adminApi.deleteProduct(id);
       toast.success("Đã xóa sản phẩm thành công!");
-      setProducts((prev) => prev.filter((p) => p.productId !== id));
+      setProducts((prev) => {
+        const nextProducts = prev.filter((p) => p.productId !== id);
+        const nextFilteredCount = nextProducts.filter((p) => {
+          const matchSearch = p.productName
+            .toLowerCase()
+            .includes(search.toLowerCase());
+          const matchCategory =
+            filterCategory && filterCategory !== "Tất cả"
+              ? p.categoryName === filterCategory
+              : true;
+
+          return matchSearch && matchCategory;
+        }).length;
+
+        const nextTotalPages = Math.max(
+          1,
+          Math.ceil(nextFilteredCount / PAGE_SIZE),
+        );
+        setPage((prevPage) => Math.min(prevPage, nextTotalPages));
+
+        return nextProducts;
+      });
     } catch (err) {
       console.error("Lỗi khi xóa:", err);
-      toast.error(err?.response?.data?.message || err.message || "Không thể xóa sản phẩm!");
+      toast.error(
+        err?.response?.data?.message ||
+          err.message ||
+          "Không thể xóa sản phẩm!",
+      );
     } finally {
       setConfirmOpen(false);
       setProductToDelete(null);
@@ -78,17 +136,23 @@ const ProductManagement = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchSearch = p.productName.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = filterCategory && filterCategory !== "Tất cả"
-        ? p.categoryName === filterCategory
-        : true;
+      const matchSearch = p.productName
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchCategory =
+        filterCategory && filterCategory !== "Tất cả"
+          ? p.categoryName === filterCategory
+          : true;
       return matchSearch && matchCategory;
     });
   }, [products, search, filterCategory]);
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
   const startIndex = (page - 1) * PAGE_SIZE;
-  const currentPageData = filteredProducts.slice(startIndex, startIndex + PAGE_SIZE);
+  const currentPageData = filteredProducts.slice(
+    startIndex,
+    startIndex + PAGE_SIZE,
+  );
 
   const handleOpenIngredientsModal = (product) => {
     setProductForIngredients(product);
@@ -114,11 +178,16 @@ const ProductManagement = () => {
             <select
               className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-sm text-gray-700 hover:border-indigo-400 hover:shadow-sm transition"
               value={filterCategory}
-              onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setFilterCategory(e.target.value);
+                setPage(1);
+              }}
             >
               <option value="">Tất cả danh mục</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
             </select>
 
@@ -128,7 +197,10 @@ const ProductManagement = () => {
                 placeholder="Tìm theo tên sản phẩm..."
                 className="px-4 py-2 w-full outline-none text-sm text-gray-700 placeholder-gray-400"
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
               />
               <div className="px-3 text-gray-400 border-l border-gray-200">
                 <Search size={20} />
@@ -193,43 +265,101 @@ const ProductManagement = () => {
           <table className="min-w-full text-sm">
             <thead className="bg-indigo-50 text-indigo-700 text-left">
               <tr>
-                {["#", "Ảnh", "Tên", "Mô tả", "Danh mục", "Trạng thái", "Nguyên liệu", "Thao tác"].map(
-                  (title) => <th key={title} className="px-4 py-3 font-semibold">{title}</th>
-                )}
+                {[
+                  "#",
+                  "Ảnh",
+                  "Tên",
+                  "Mô tả",
+                  "Danh mục",
+                  "Trạng thái",
+                  "Nguyên liệu",
+                  "Thao tác",
+                ].map((title) => (
+                  <th key={title} className="px-4 py-3 font-semibold">
+                    {title}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="8" className="p-6 text-center text-gray-500">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan="8" className="p-6 text-center text-gray-500">
+                    Đang tải dữ liệu...
+                  </td>
+                </tr>
               ) : currentPageData.length === 0 ? (
-                <tr><td colSpan="8" className="p-6 text-center text-gray-500">Không có sản phẩm nào.</td></tr>
+                <tr>
+                  <td colSpan="8" className="p-6 text-center text-gray-500">
+                    Không có sản phẩm nào.
+                  </td>
+                </tr>
               ) : (
                 currentPageData.map((p, index) => (
-                  <tr key={p.productId} className="border-t hover:bg-indigo-50/30 transition">
-                    <td className="px-4 py-3 text-gray-700 font-medium">{startIndex + index + 1}</td>
+                  <tr
+                    key={p.productId}
+                    className="border-t hover:bg-indigo-50/30 transition"
+                  >
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      {startIndex + index + 1}
+                    </td>
                     <td className="px-4 py-3">
-                      <img src={p.imageProduct} alt={p.productName} className="h-16 w-16 object-cover rounded" />
+                      <img
+                        src={p.imageProduct}
+                        alt={p.productName}
+                        className="h-16 w-16 object-cover rounded"
+                      />
                     </td>
                     <td className="px-4 py-3">{p.productName}</td>
-                    <td className="px-4 py-3 truncate max-w-xs">{p.descriptionProduct}</td>
+                    <td className="px-4 py-3 truncate max-w-xs">
+                      {p.descriptionProduct}
+                    </td>
                     <td className="px-4 py-3">{p.categoryName}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${p.isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
                         {p.isAvailable ? "Có hàng" : "Hết hàng"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => handleOpenIngredientsModal(p)} className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium">Nguyên liệu</button>
+                      <button
+                        onClick={() => handleOpenIngredientsModal(p)}
+                        className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium"
+                      >
+                        Nguyên liệu
+                      </button>
                     </td>
-                    <td className="px-4 py-3"> 
-                      <div className="flex items-center gap-2"> 
-                        <button onClick={() => handleEdit(p)} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600" title="Sửa" > <Edit2 size={18} /> 
-                        </button> 
-                        <button onClick={() => { setProductToDelete(p); setConfirmOpen(true); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600" title="Xóa" > <Trash2 size={18} /> 
-                        </button> 
-                      </div> 
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleViewDetail(p)}
+                          className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+                          title="Sửa"
+                        >
+                          {" "}
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setProductToDelete(p);
+                            setConfirmOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-2 text-red-600 hover:bg-red-50"
+                          title="Xóa"
+                        >
+                          <Trash2 size={18} />
+                          <span className="text-sm font-medium">Xóa</span>
+                        </button>
+                      </div>
                     </td>
-                    
                   </tr>
                 ))
               )}
@@ -245,21 +375,64 @@ const ProductManagement = () => {
             <p className="text-center col-span-full">Không có sản phẩm nào.</p>
           ) : (
             currentPageData.map((p) => (
-              <div key={p.productId} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1 flex flex-col overflow-hidden">
+              <div
+                key={p.productId}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1 flex flex-col overflow-hidden"
+              >
                 <div className="relative aspect-square overflow-hidden rounded-t-2xl">
-                  <img src={p.imageProduct} alt={p.productName} className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"/>
-                  <span className={`absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold ${p.isAvailable ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                  <img
+                    src={p.imageProduct}
+                    alt={p.productName}
+                    className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                  />
+                  <span
+                    className={`absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold ${p.isAvailable ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}
+                  >
                     {p.isAvailable ? "Có hàng" : "Hết hàng"}
                   </span>
                 </div>
                 <div className="p-4 flex flex-col flex-1 justify-between">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">{p.productName}</h3>
-                  <p className="text-sm text-gray-500 mb-2 line-clamp-3">{p.descriptionProduct}</p>
-                  <p className="text-sm font-medium text-indigo-600 mb-4">Danh mục: {p.categoryName}</p>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">
+                    {p.productName}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-2 line-clamp-3">
+                    {p.descriptionProduct}
+                  </p>
+                  <p className="text-sm font-medium text-indigo-600 mb-4">
+                    Danh mục: {p.categoryName}
+                  </p>
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => handleEdit(p)} className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 shadow-md hover:shadow-lg transition" title="Chỉnh sửa"><Edit2 size={18} /></button>
-                    <button onClick={() => { setProductToDelete(p); setConfirmOpen(true); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600 shadow-md hover:shadow-lg transition" title="Xóa"><Trash2 size={18} /></button>
-                    <button onClick={() => handleOpenIngredientsModal(p)} className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium">Nguyên liệu</button>
+                    <button
+                      onClick={() => handleViewDetail(p)}
+                      className="p-2 rounded-lg text-indigo-600 shadow-md transition hover:bg-indigo-50 hover:shadow-lg"
+                      title="Xem chi tiết"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleEdit(p)}
+                      className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 shadow-md hover:shadow-lg transition"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProductToDelete(p);
+                        setConfirmOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-red-600 shadow-md transition hover:bg-red-50 hover:shadow-lg"
+                      title="Xóa"
+                    >
+                      <Trash2 size={18} />
+                      <span className="text-sm font-medium">Xóa</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenIngredientsModal(p)}
+                      className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium"
+                    >
+                      Nguyên liệu
+                    </button>
                   </div>
                 </div>
               </div>
@@ -269,66 +442,71 @@ const ProductManagement = () => {
       )}
 
       {/* Modern Pagination */}
-{!loading && filteredProducts.length > 0 && (
-  <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
-    {/* Thông tin bản ghi */}
-    <div className="text-gray-600 font-medium">
-      Hiển thị <span className="text-indigo-600 font-bold">{Math.min(filteredProducts.length, page * PAGE_SIZE)}</span> / {filteredProducts.length} bản ghi
-    </div>
+      {!loading && filteredProducts.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3 text-sm">
+          {/* Thông tin bản ghi */}
+          <div className="text-gray-600 font-medium">
+            Hiển thị{" "}
+            <span className="text-indigo-600 font-bold">
+              {Math.min(filteredProducts.length, page * PAGE_SIZE)}
+            </span>{" "}
+            / {filteredProducts.length} bản ghi
+          </div>
 
-    {/* Nút phân trang */}
-    <div className="flex items-center gap-2 flex-wrap">
-      {/* Nút Đầu */}
-      <button
-        onClick={() => setPage(1)}
-        disabled={page === 1}
-        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        « Đầu
-      </button>
+          {/* Nút phân trang */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Nút Đầu */}
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              « Đầu
+            </button>
 
-      {/* Nút Trước */}
-      <button
-        onClick={() => setPage((p) => Math.max(1, p - 1))}
-        disabled={page === 1}
-        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        ← Trước
-      </button>
+            {/* Nút Trước */}
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ← Trước
+            </button>
 
-      {/* Hiển thị Trang hiện tại */}
-      <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
-        {page} / {totalPages}
-      </span>
+            {/* Hiển thị Trang hiện tại */}
+            <span className="px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold shadow-sm">
+              {page} / {totalPages}
+            </span>
 
-      {/* Nút Sau */}
-      <button
-        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-        disabled={page === totalPages}
-        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Sau →
-      </button>
+            {/* Nút Sau */}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sau →
+            </button>
 
-      {/* Nút Cuối */}
-      <button
-        onClick={() => setPage(totalPages)}
-        disabled={page === totalPages}
-        className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Cuối »
-      </button>
-    </div>
-  </div>
-)}
-
-
+            {/* Nút Cuối */}
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cuối »
+            </button>
+          </div>
+        </div>
+      )}
 
       {confirmOpen && productToDelete && (
         <ConfirmDialog
           title="Xác nhận xóa"
           message={`Bạn có chắc chắn muốn xóa sản phẩm "${productToDelete.productName}"?`}
-          onCancel={() => { setConfirmOpen(false); setProductToDelete(null); }}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setProductToDelete(null);
+          }}
           onConfirm={handleDelete}
         />
       )}
@@ -348,6 +526,26 @@ const ProductManagement = () => {
           onClose={() => setIngredientsModalOpen(false)}
           editItem={productForIngredients}
           onSuccess={fetchProducts}
+        />
+      )}
+
+      {detailModalOpen && selectedProduct && (
+        <ProductDetailModal
+          isOpen={detailModalOpen}
+          onClose={() => {
+            setDetailModalOpen(false);
+            setSelectedProduct(null);
+            setDetailLoading(false);
+          }}
+          product={
+            detailLoading
+              ? {
+                  ...selectedProduct,
+                  descriptionProduct:
+                    selectedProduct.descriptionProduct || "Đang tải chi tiết sản phẩm...",
+                }
+              : selectedProduct
+          }
         />
       )}
     </div>

@@ -1,6 +1,7 @@
 using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,7 @@ namespace ITHealthy.Controllers
         // ============================================
         // 🔹 1. GET ALL ORDERS
         // ============================================
+        [Authorize(Roles = "Admin")]
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetAllOrders()
         {
@@ -138,6 +140,7 @@ namespace ITHealthy.Controllers
 
         //  http://localhost:5000/api/orders/filter?type=pickup
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("filter")]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> FilterOrders(
             [FromQuery] string? status,
@@ -196,6 +199,7 @@ namespace ITHealthy.Controllers
         // ============================================
         // 🔹 4. GET ORDER BY ID
         // ============================================
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrderById(int id)
         {
@@ -254,6 +258,7 @@ namespace ITHealthy.Controllers
         // 🔹 5. UPDATE ORDER
         // PUT /api/orders/update/{id}
         // ============================================
+        [Authorize(Roles = "Admin")]
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order request)
         {
@@ -277,6 +282,7 @@ namespace ITHealthy.Controllers
         // 🔹 6. DELETE ORDER
         // DELETE /api/orders/delete/{id}
         // ============================================
+        [Authorize(Roles = "Admin")]
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
@@ -292,6 +298,7 @@ namespace ITHealthy.Controllers
 
         // CONFIRM ORDER (e.g. Pending → Confirmed)
         // PUT      http://localhost:5000/api/orders/status/1
+        [Authorize(Roles = "Admin")]
         [HttpPut("status/{id}")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateStatusDTO request)
         {
@@ -313,6 +320,52 @@ namespace ITHealthy.Controllers
                 newStatus = order.StatusOrder
             });
         }
+
+
+        // GET: api/shippingdetails/by-order/123
+        [HttpGet("address-by-order/{orderId}")]
+        public async Task<ActionResult<ShippingAddressResponseDTO>> GetShippingAddressByOrder(int orderId)
+        {
+            // Lấy bản ghi ShippingDetail theo OrderId, Include Address
+            // Nếu 1 order có nhiều shipping detail, có thể OrderByDescending ShipDate để lấy cái mới nhất
+            var shippingDetail = await _context.ShippingDetails
+                .Include(sd => sd.Address)
+                .FirstOrDefaultAsync(sd => sd.OrderId == orderId);
+
+            if (shippingDetail == null || shippingDetail.Address == null)
+            {
+                return NotFound(new
+                {
+                    message = "Không tìm thấy thông tin địa chỉ giao hàng cho đơn hàng này."
+                });
+            }
+
+            var addr = shippingDetail.Address;
+
+            var result = new ShippingAddressResponseDTO
+            {
+                ShippingId = shippingDetail.ShippingId,
+                AddressId = addr.AddressId,
+                CustomerId = addr.CustomerId,
+                ReceiverName = addr.ReceiverName,
+                PhoneNumber = addr.PhoneNumber,
+                StreetAddress = addr.StreetAddress,
+                Ward = addr.Ward,
+                District = addr.District,
+                City = addr.City,
+                Country = addr.Country,
+                Postcode = addr.Postcode,
+                IsDefault = addr.IsDefault,
+
+                CourierName = shippingDetail.CourierName,
+                ShipDate = shippingDetail.ShipDate,
+                ShipTime = shippingDetail.ShipTime,
+                Cost = shippingDetail.Cost
+            };
+
+            return Ok(result);
+        }
+
 
     }
 }

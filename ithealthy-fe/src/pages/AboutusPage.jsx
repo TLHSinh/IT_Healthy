@@ -1,23 +1,23 @@
-
 export default function AboutusPage() {
   return (
-    <div className='main-au' >
+    <div className="main-au">
       <section className="min-h-screen bg-[#f5edd8] flex items-center justify-center px-4 pt-5">
-      <div className="max-w-5xl mx-auto text-center">
-        {/* Small heading */}
-        <p className="text-[#4C082A] text-sm md:text-base font-semibold tracking-widest uppercase mb-6">
-          CÂU CHUYỆN
-        </p>
+        <div className="max-w-5xl mx-auto text-center">
+          {/* Small heading */}
+          <p className="text-[#4C082A] text-sm md:text-base font-semibold tracking-widest uppercase mb-6">
+            CÂU CHUYỆN
+          </p>
 
-        {/* Main heading */}
-        <h1 className="text-[#531b2a] text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-          Soumaki tin rằng những bữa ăn lành mạnh là cách đơn giản nhất để yêu thương chính mình
-        </h1>
+          {/* Main heading */}
+          <h1 className="text-[#531b2a] text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            IT_Healthy tin rằng những bữa ăn lành mạnh là cách đơn giản nhất để
+            yêu thương chính mình
+          </h1>
 
-        {/* Decorative line */}
-        <div className="mt-12 w-24 h-1 bg-gradient-to-r from-[#a52a5a] to-[#d4527a] mx-auto rounded-full" />
-      </div>
-    </section>
+          {/* Decorative line */}
+          <div className="mt-12 w-24 h-1 bg-gradient-to-r from-[#a52a5a] to-[#d4527a] mx-auto rounded-full" />
+        </div>
+      </section>
       <section className="relative min-h-screen">
         {/* Background Image */}
         <div className="absolute inset-0">
@@ -40,18 +40,21 @@ export default function AboutusPage() {
             </h2>
 
             <p className="text-white text-base md:text-lg leading-relaxed max-w-lg">
-              Thông qua món ăn tròn vị, đủ chất được chăm chút gửi đến bạn, Soumaki mong được đồng hành cùng bạn nâng niu sức khoẻ và khởi đầu hành trình ăn lành – sống xanh. Hãy để những bữa ăn ngon–lành làm điểm giao giữa bạn với phiên bản tương lai tràn đầy năng lượng và hạnh phúc nhé!
+              Thông qua món ăn tròn vị, đủ chất được chăm chút gửi đến bạn,
+              IT_Healthy mong được đồng hành cùng bạn nâng niu sức khoẻ và khởi
+              đầu hành trình ăn lành – sống xanh. Hãy để những bữa ăn ngon–lành
+              làm điểm giao giữa bạn với phiên bản tương lai tràn đầy năng lượng
+              và hạnh phúc nhé!
             </p>
           </div>
         </div>
       </section>
 
-
       <section className="py-20 px-4 bg-[#f5edd8]">
         <div className="max-w-7xl mx-auto">
           {/* Section Title */}
           <h2 className="text-[#531b2a] text-3xl md:text-4xl font-bold text-center mb-16">
-            GIÁ TRỊ SOUMAKI THEO ĐUỔI
+            GIÁ TRỊ IT_Healthy THEO ĐUỔI
           </h2>
 
           {/* Cards Grid */}
@@ -69,7 +72,8 @@ export default function AboutusPage() {
                 {/* Text */}
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                   <h3 className="text-[#F5EDD8] text-xl md:text-2xl font-bold leading-tight">
-                    Nấu bằng tình yêu<br />& tâm huyết
+                    Nấu bằng tình yêu
+                    <br />& tâm huyết
                   </h3>
                 </div>
               </div>
@@ -86,7 +90,9 @@ export default function AboutusPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                   <h3 className="text-[#F5EDD8] text-xl md:text-2xl font-bold leading-tight">
-                    Cá nhân hoá<br />trải nghiệm
+                    Cá nhân hoá
+                    <br />
+                    trải nghiệm
                   </h3>
                 </div>
               </div>
@@ -103,7 +109,8 @@ export default function AboutusPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                   <h3 className="text-[#F5EDD8] text-xl md:text-2xl font-bold leading-tight">
-                    Gắn kết bền vững<br />& lâu dài
+                    Gắn kết bền vững
+                    <br />& lâu dài
                   </h3>
                 </div>
               </div>
@@ -120,7 +127,9 @@ export default function AboutusPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                   <h3 className="text-[#F5EDD8] text-xl md:text-2xl font-bold leading-tight">
-                    Nối lời ngon<br />tiếng ngọt
+                    Nối lời ngon
+                    <br />
+                    tiếng ngọt
                   </h3>
                 </div>
               </div>

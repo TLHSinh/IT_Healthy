@@ -5,11 +5,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ITHealthy.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ITHealthy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class PromotionsController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;

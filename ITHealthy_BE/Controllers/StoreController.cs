@@ -1,6 +1,7 @@
 using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,6 +58,7 @@ namespace ITHealthy.Controllers
         }
 
         // ✅ Thêm cửa hàng (ngày phải nhập)
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateStore([FromBody] Store model)
         {
@@ -71,6 +73,7 @@ namespace ITHealthy.Controllers
         }
 
         // ✅ Cập nhật cửa hàng
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateStore(int id, [FromBody] Store model)
         {
@@ -99,6 +102,7 @@ namespace ITHealthy.Controllers
         }
 
         // ✅ Xóa cửa hàng
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStore(int id)
         {

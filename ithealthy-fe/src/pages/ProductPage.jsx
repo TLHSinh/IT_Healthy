@@ -18,7 +18,12 @@ export default function MenuPage() {
 
     fetch("http://localhost:5000/api/products/all-products")
       .then((res) => res.json())
-      .then((data) => setProducts(data))
+      .then((data) => {
+        const availableProducts = Array.isArray(data)
+          ? data.filter((product) => product.isAvailable === true)
+          : [];
+        setProducts(availableProducts);
+      })
       .catch((err) => console.error("Error fetching products:", err));
   }, []);
 
@@ -82,7 +87,7 @@ export default function MenuPage() {
         {categories.map((cat) => {
           const filteredProducts = products.filter(
             (p) =>
-              p.categoryName.toLowerCase() === cat.categoryName.toLowerCase()
+              p.categoryName.toLowerCase() === cat.categoryName.toLowerCase(),
           );
 
           // Tạo ref cho từng section

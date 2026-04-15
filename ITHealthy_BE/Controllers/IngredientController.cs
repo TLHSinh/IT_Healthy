@@ -4,6 +4,7 @@ using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
 using ITHealthy.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ITHealthy.Controllers;
@@ -91,6 +92,7 @@ namespace ITHealthy.Controllers
 
 
         //  POST: http://localhost:5000/api/ingredient
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Ingredient>> CreateIng([FromForm] IngredientRequestDTO request)
         {
@@ -126,6 +128,7 @@ namespace ITHealthy.Controllers
         }
 
         //  PUT: http://localhost:5000/api/ingredient/{id}
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateIngredient(int id, [FromForm] IngredientRequestDTO request)
         {
@@ -160,6 +163,7 @@ namespace ITHealthy.Controllers
         }
 
         //  DELETE: http://localhost:5000/api/ingredient/{id}
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteIngredient(int id)
         {

@@ -1,23 +1,16 @@
 // src/hooks/useAuthAdmin.js
-import { useState } from "react";
+import { clearAdminSession, getAdminInfo, isAdminAuthenticated, setAdminSession } from "../utils/adminAuth";
 
 export function useAuthAdmin() {
-  const [admin, setAdmin] = useState(() => {
-    const saved = localStorage.getItem("admin");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const admin = getAdminInfo();
 
   const login = (data) => {
-    localStorage.setItem("token", data.AccessToken);
-    localStorage.setItem("admin", JSON.stringify(data.Staff));
-    setAdmin(data.Staff);
+    setAdminSession(data);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("admin");
-    setAdmin(null);
+    clearAdminSession();
   };
 
-  return { admin, login, logout };
+  return { admin, isAuthenticated: isAdminAuthenticated(), login, logout };
 }

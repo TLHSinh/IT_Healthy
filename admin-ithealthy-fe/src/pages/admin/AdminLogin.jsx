@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import bgLogin from "../../assets/bg_login.jpg"; // import ảnh
 import HashLoader from "react-spinners/HashLoader";
+import { clearAdminSession, isAdminAuthenticated, setAdminSession } from "../../utils/adminAuth";
 
 const AdminLogin = () => {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
@@ -13,13 +14,18 @@ const AdminLogin = () => {
 
   // Kiểm tra remember login
   useEffect(() => {
+    if (isAdminAuthenticated()) {
+      navigate("/admin/dashboard", { replace: true });
+      return;
+    }
+
     const savedEmail = localStorage.getItem("rememberedEmail");
     const savedPassword = localStorage.getItem("rememberedPassword");
 
     if (savedEmail && savedPassword) {
       setForm({ email: savedEmail, password: savedPassword, remember: true });
     }
-  }, []);
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -38,13 +44,13 @@ const AdminLogin = () => {
 
       const role = res.data.staff?.roleStaff?.toLowerCase() || res.data.role?.toLowerCase();
       if (role !== "admin") {
+        clearAdminSession();
         toast.error("Tài khoản này không có quyền quản trị!");
         setLoading(false);
         return;
       }
 
-      localStorage.setItem("adminToken", res.data.accessToken);
-      localStorage.setItem("adminInfo", JSON.stringify(res.data.staff));
+      setAdminSession(res.data);
 
       if (form.remember) {
         localStorage.setItem("rememberedEmail", form.email);
@@ -55,8 +61,9 @@ const AdminLogin = () => {
       }
 
       toast.success("Đăng nhập thành công!");
-      navigate("/admin/dashboard");
+      navigate("/admin/dashboard", { replace: true });
     } catch (err) {
+      clearAdminSession();
       toast.error(err.response?.data?.Message || "Đăng nhập thất bại!");
     } finally {
       setLoading(false);

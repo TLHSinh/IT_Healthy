@@ -1,13 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import '../pages/HomePage.css';
+import "../pages/HomePage.css";
 import { motion, useInView, useAnimation } from "framer-motion";
 // import { useInView } from "react-intersection-observer";
 import MealCarousel from "../components/FoodCarousel";
 import ImageCardGallery from "../components/ImageCardGallery";
 import ImageAdv from "../components/ImageAdv";
-import { Facebook, Instagram, MessageCircle, Phone } from 'lucide-react';
+import { Facebook, Instagram, MessageCircle, Phone } from "lucide-react";
 
 export default function HomePage() {
   const { user, logout } = useContext(AuthContext);
@@ -100,9 +100,9 @@ export default function HomePage() {
         <div className="content2-inner">
           <h1>Your healthy food soulmate</h1>
           <p>
-            Soumaki mong trở thành một tri kỷ, cùng bạn nuôi dưỡng tình yêu với
-            bản thân và thắt chặt mối quan hệ với thực phẩm lành mạnh. Chân ái
-            ngon-lành của bạn ở ngay đây rồi.
+            IT_Healthy mong trở thành một tri kỷ, cùng bạn nuôi dưỡng tình yêu
+            với bản thân và thắt chặt mối quan hệ với thực phẩm lành mạnh. Chân
+            ái ngon-lành của bạn ở ngay đây rồi.
           </p>
         </div>
       </section>
@@ -145,23 +145,24 @@ export default function HomePage() {
         <ImageAdv />
       </section>
 
-
       <section className="container-content6-hp">
         <div className="content6-inner">
           <h2>SỨ MỆNH CỦA CHÚNG TÔI</h2>
           <h1>Cùng bạn, nuôi dưỡng mối quan hệ lành mạnh với thực phẩm</h1>
           <p>
-            Thông qua món ăn tròn vị, đủ chất được chăm chút gửi đến bạn, IT Healthy mong được đồng hành cùng bạn nâng niu sức khoẻ và khởi đầu hành trình ăn lành – sống xanh.
+            Thông qua món ăn tròn vị, đủ chất được chăm chút gửi đến bạn, IT
+            Healthy mong được đồng hành cùng bạn nâng niu sức khoẻ và khởi đầu
+            hành trình ăn lành – sống xanh.
           </p>
-          
-          <div className="image-container6-hp">
-            <img src="https://soumaki.com.vn/wp-content/uploads/2024/05/Pic-Web_Our-Story-1024x614.webp" alt="mission-image" />
-          </div>
 
+          <div className="image-container6-hp">
+            <img
+              src="https://soumaki.com.vn/wp-content/uploads/2024/05/Pic-Web_Our-Story-1024x614.webp"
+              alt="mission-image"
+            />
+          </div>
         </div>
       </section>
-
-
     </div>
   );
 }

@@ -2,6 +2,7 @@ using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
 using ITHealthy.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,34 @@ namespace ITHealthy.Controllers
         {
             _context = context;
             _cloudinaryService = cloudinaryService;
+        }
+
+        private async Task<string?> ValidateProductRequest(ProductDTO request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ProductName))
+                return "Tên sản phẩm không được để trống.";
+
+            if (request.BasePrice.HasValue && request.BasePrice < 0)
+                return "Giá sản phẩm phải lớn hơn hoặc bằng 0.";
+
+            if (request.Calories.HasValue && request.Calories < 0 ||
+                request.Protein.HasValue && request.Protein < 0 ||
+                request.Carbs.HasValue && request.Carbs < 0 ||
+                request.Fat.HasValue && request.Fat < 0)
+            {
+                return "Các chỉ số dinh dưỡng phải lớn hơn hoặc bằng 0.";
+            }
+
+            if (request.CategoryId.HasValue)
+            {
+                var categoryExists = await _context.Categories
+                    .AnyAsync(c => c.CategoryId == request.CategoryId.Value);
+
+                if (!categoryExists)
+                    return "Danh mục sản phẩm không tồn tại.";
+            }
+
+            return null;
         }
 
         // 🔹 GET: http://localhost:5000/api/products/all-products
@@ -78,11 +107,13 @@ namespace ITHealthy.Controllers
 
         //POST: http://localhost:5000/api/products/add
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("add")]
         public async Task<IActionResult> AddProduct([FromForm] ProductDTO request)
         {
-            if (string.IsNullOrEmpty(request.ProductName))
-                return BadRequest(new { message = "Tên sản phẩm không được để trống." });
+            var validationMessage = await ValidateProductRequest(request);
+            if (validationMessage != null)
+                return BadRequest(new { message = validationMessage });
 
             string? imageUrl = null;
 
@@ -125,12 +156,17 @@ namespace ITHealthy.Controllers
 
 
         //PUT: http://localhost:5000/api/products/update/{id}
+        [Authorize(Roles = "Admin")]
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductDTO request)
         {
             var product = await _context.Products.FindAsync(id);
             if (product == null)
                 return NotFound(new { message = "Không tìm thấy sản phẩm!" });
+
+            var validationMessage = await ValidateProductRequest(request);
+            if (validationMessage != null)
+                return BadRequest(new { message = validationMessage });
 
             if (request.ImageFile != null && request.ImageFile.Length > 0)
             {
@@ -165,6 +201,7 @@ namespace ITHealthy.Controllers
         }
 
         //DELETE: http://localhost:5000/api/products/delete/{id}
+        [Authorize(Roles = "Admin")]
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -172,8 +209,18 @@ namespace ITHealthy.Controllers
             if (product == null)
                 return NotFound(new { message = "Không tìm thấy sản phẩm." });
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return BadRequest(new
+                {
+                    message = "Không thể xóa sản phẩm vì đang có dữ liệu liên quan."
+                });
+            }
 
             return Ok(new { message = "Xóa sản phẩm thành công." });
         }

@@ -220,6 +220,9 @@ namespace ITHealthy.Controllers
                 if (staff.IsActive == false)
                     return BadRequest(new { Message = "Tài khoản Staff chưa được kích hoạt." });
 
+                if (!string.Equals(staff.RoleStaff, "admin", StringComparison.OrdinalIgnoreCase))
+                    return Unauthorized(new { Message = "Tài khoản này không có quyền quản trị." });
+
                 var accessToken = _adminTokenService.CreateAccessTokenAdmin(staff, new List<string> { "Admin" });
                 // Nếu muốn Staff có refresh token, có thể thêm bảng RefreshToken cho Staff tương tự Customer
 

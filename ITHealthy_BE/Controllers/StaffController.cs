@@ -4,6 +4,7 @@ using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
 using ITHealthy.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ITHealthy.Controllers;
@@ -12,6 +13,7 @@ namespace ITHealthy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class StaffsController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;

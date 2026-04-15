@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ITHealthy.Models;
 using System;
 using ITHealthy.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ITHealthy.Controllers
 {
@@ -20,7 +21,7 @@ namespace ITHealthy.Controllers
             _context = context;
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetAllVouchers()
         {
@@ -49,6 +50,7 @@ namespace ITHealthy.Controllers
         }
 
         //  api/vouchers/{id}
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<object>> GetVoucherById(int id)
         {
@@ -101,7 +103,7 @@ namespace ITHealthy.Controllers
             return Ok(voucher);
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult> CreateVoucher([FromBody] VoucherCreateRequest request)
         {
@@ -174,7 +176,7 @@ namespace ITHealthy.Controllers
             { message = "Tạo voucher thành công.", voucher });
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<ActionResult> UpdateVoucher(int id, [FromBody] VoucherCreateRequest request)
         {
@@ -214,7 +216,7 @@ namespace ITHealthy.Controllers
             return Ok(new { message = "Cập nhật voucher thành công." });
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteVoucher(int id)
         {
@@ -233,6 +235,7 @@ namespace ITHealthy.Controllers
         }
 
         // api/vouchers/store/{storeId}
+        [Authorize(Roles = "Admin")]
         [HttpGet("store/{storeId}")]
         public async Task<ActionResult<IEnumerable<object>>> GetVouchersByStore(int storeId)
         {
@@ -260,6 +263,7 @@ namespace ITHealthy.Controllers
         }
 
         // api/vouchers/product/{productId}
+        [Authorize(Roles = "Admin")]
         [HttpGet("product/{productId}")]
         public async Task<ActionResult<IEnumerable<object>>> GetVouchersByProduct(int productId)
         {
@@ -289,6 +293,7 @@ namespace ITHealthy.Controllers
 
 
         // api/vouchers/category/{categoryId}
+        [Authorize(Roles = "Admin")]
         [HttpGet("category/{categoryId}")]
         public async Task<ActionResult<IEnumerable<object>>> GetVouchersByCategory(int categoryId)
         {

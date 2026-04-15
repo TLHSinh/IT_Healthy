@@ -16,11 +16,28 @@ namespace ITHealthy.Services
             _configuration = configuration;
         }
 
+        private string GetSigningKey()
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            return jwtSettings["SecretKey"] ?? jwtSettings["Key"]
+                ?? throw new InvalidOperationException("JwtSettings.SecretKey (hoặc JwtSettings.Key) chưa được cấu hình.");
+        }
+
+        private static string NormalizeRole(string? role, string defaultRole)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return defaultRole;
+
+            return string.Equals(role.Trim(), defaultRole, StringComparison.OrdinalIgnoreCase)
+                ? defaultRole
+                : role.Trim();
+        }
+
         // ✅ Access Token cho Customer (User)
         public string CreateAccessTokenUser(Customer user, IList<string> roles)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(GetSigningKey()));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
@@ -37,7 +54,7 @@ namespace ITHealthy.Services
 
             // Thêm role cho user
             if (!string.IsNullOrEmpty(user.RoleUser))
-                claims.Add(new Claim(ClaimTypes.Role, user.RoleUser));
+                claims.Add(new Claim(ClaimTypes.Role, NormalizeRole(user.RoleUser, "User")));
             else
                 claims.Add(new Claim(ClaimTypes.Role, "User"));
 
@@ -56,7 +73,7 @@ namespace ITHealthy.Services
         public string CreateAccessTokenAdmin(Staff staff, IList<string> roles)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(GetSigningKey()));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
@@ -73,7 +90,7 @@ namespace ITHealthy.Services
 
             // Thêm role cho admin
             if (!string.IsNullOrEmpty(staff.RoleStaff))
-                claims.Add(new Claim(ClaimTypes.Role, staff.RoleStaff));
+                claims.Add(new Claim(ClaimTypes.Role, NormalizeRole(staff.RoleStaff, "Admin")));
             else
                 claims.Add(new Claim(ClaimTypes.Role, "Admin"));
 

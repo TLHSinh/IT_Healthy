@@ -4,6 +4,7 @@ using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
 using ITHealthy.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ITHealthy.Controllers;
@@ -25,6 +26,7 @@ namespace ITHealthy.Controllers
         }
 
         // GET: api/customers
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAllCustomers()
         {
@@ -43,6 +45,7 @@ namespace ITHealthy.Controllers
         }
 
         // POST: api/customers
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Customer>> CreateCustomer([FromForm] CustomerRequestDTO request)
         {
@@ -90,6 +93,7 @@ namespace ITHealthy.Controllers
         }
 
         // PUT: api/customers/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromForm] CustomerRequestDTO request)
         {
@@ -139,6 +143,7 @@ namespace ITHealthy.Controllers
         }
 
         // DELETE: api/customers/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

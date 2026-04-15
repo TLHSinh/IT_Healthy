@@ -1,13 +1,11 @@
 import axios from "axios";
+import { getAdminToken } from "../utils/adminAuth";
 
 const BASE = "http://localhost:5000/api";
 
 // 🔐 Lấy token admin
 function getToken() {
-  return (
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken")
-  );
+  return getAdminToken();
 }
 
 
@@ -28,6 +26,7 @@ export const adminApi = {
   
   createStaff: async (payload, isFormData = false) => {
   const config = { headers: {} };
+  config.headers.Authorization = `Bearer ${getToken()}`;
   if (isFormData) config.headers["Content-Type"] = "multipart/form-data";
   const res = await axios.post(`${BASE}/staffs`, payload, config);
   return res.data;
@@ -35,6 +34,7 @@ export const adminApi = {
 
 updateStaff: async (id, payload, isFormData = false) => {
   const config = { headers: {} };
+  config.headers.Authorization = `Bearer ${getToken()}`;
   if (isFormData) config.headers["Content-Type"] = "multipart/form-data";
   const res = await axios.put(`${BASE}/staffs/${id}`, payload, config);
   return res.data;
@@ -210,6 +210,9 @@ updateCustomer: async (id, form) => {
   // ====================== 🛒 SẢN PHẨM ======================
  getAllProducts: () =>
     axios.get(`${BASE}/products/all-products`, { headers: headers() }),
+
+  getProductCategories: () =>
+    axios.get(`${BASE}/category/category_pro`, { headers: headers() }),
 
   // Lấy sản phẩm theo ID
   getProductById: (id) =>

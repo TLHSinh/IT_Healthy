@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useContext } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import toast from "react-hot-toast";
 
 export default function CreateYourBowlPage() {
   const { submenuOpen } = useOutletContext(); // 🟢 nhận từ MainLayout
@@ -11,8 +10,9 @@ export default function CreateYourBowlPage() {
   const sectionRefs = useRef({}); // Lưu ref từng category
   const [showPopup, setShowPopup] = useState(false);
   const [bowlName, setBowlName] = useState("");
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const [toastState, setToastState] = useState({ show: false, message: "" });
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // ===== Lấy danh mục category =====
   useEffect(() => {
@@ -53,11 +53,31 @@ export default function CreateYourBowlPage() {
 
   // Hàm tiện ích hiển thị toast 3 giây
   const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
+    setToastState({ show: true, message });
+    setTimeout(() => setToastState({ show: false, message: "" }), 3000);
+  };
+
+  const requestLogin = () => {
+    showToast("Vui lòng đăng nhập để tạo bowl!");
+    setShowPopup(false);
+    setTimeout(() => navigate("/login-user"), 800);
+  };
+
+  const handleOpenCreateBowlPopup = () => {
+    if (!user) {
+      requestLogin();
+      return;
+    }
+
+    setShowPopup(true);
   };
 
   const handleCreateBowl = async () => {
+    if (!user) {
+      requestLogin();
+      return;
+    }
+
     if (!bowlName.trim()) {
       showToast("Vui lòng nhập tên bowl!");
       return;
@@ -118,9 +138,9 @@ export default function CreateYourBowlPage() {
             submenuOpen ? "top-36" : "top-20"
           }`}
         >
-          {toast.show && (
+          {toastState.show && (
             <div className="fixed bottom-5 right-5 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg animate-slide-in">
-              {toast.message}
+              {toastState.message}
             </div>
           )}
           <div className="flex justify-center p-8 ">
@@ -212,7 +232,7 @@ export default function CreateYourBowlPage() {
 
         {Object.entries(grouped).map(([category, items]) => {
           const selectedItems = items.filter(
-            (i) => selectedCounts[i.ingredientId] > 0
+            (i) => selectedCounts[i.ingredientId] > 0,
           );
           if (selectedItems.length === 0) return null;
           return (
@@ -266,7 +286,7 @@ export default function CreateYourBowlPage() {
                   (sum, i) =>
                     sum +
                     (i.calories || 0) * (selectedCounts[i.ingredientId] || 0),
-                  0
+                  0,
                 )
                 .toFixed(0)}
             </div>
@@ -279,7 +299,7 @@ export default function CreateYourBowlPage() {
                   (sum, i) =>
                     sum +
                     (i.protein || 0) * (selectedCounts[i.ingredientId] || 0),
-                  0
+                  0,
                 )
                 .toFixed(1)}
               g
@@ -293,7 +313,7 @@ export default function CreateYourBowlPage() {
                   (sum, i) =>
                     sum +
                     (i.carbs || 0) * (selectedCounts[i.ingredientId] || 0),
-                  0
+                  0,
                 )
                 .toFixed(1)}
               g
@@ -306,7 +326,7 @@ export default function CreateYourBowlPage() {
                 .reduce(
                   (sum, i) =>
                     sum + (i.fat || 0) * (selectedCounts[i.ingredientId] || 0),
-                  0
+                  0,
                 )
                 .toFixed(1)}
               g
@@ -318,7 +338,7 @@ export default function CreateYourBowlPage() {
         {Object.values(selectedCounts).some((v) => v > 0) && (
           <div className="mt-4 flex justify-center">
             <button
-              onClick={() => setShowPopup(true)}
+              onClick={handleOpenCreateBowlPopup}
               className="px-5 py-2 bg-green-600 text-white rounded-xl shadow-md hover:bg-green-700"
             >
               Tạo Bowl
@@ -376,82 +396,7 @@ export default function CreateYourBowlPage() {
                     (sum, i) =>
                       sum +
                       (i.calories || 0) * (selectedCounts[i.ingredientId] || 0),
-                    0
-                  )
-                  .toFixed(0)}{" "}
-                kcal
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowPopup(false)}
-                  className="px-4 py-2 border rounded-xl"
-                >
-                  Hủy
-                </button>
-
-                <button
-                  onClick={() => handleCreateBowl()}
-                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
-                >
-                  Xác nhận tạo
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* POPUP TẠO BOWL */}
-        {showPopup && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
-            <div className="bg-white w-[400px] rounded-xl p-6 shadow-xl">
-              <h2 className="text-lg font-bold mb-3 text-[#5A2E00]">
-                Tạo Bowl
-              </h2>
-
-              <label className="text-sm font-semibold text-[#5A2E00]">
-                Tên bowl
-              </label>
-              <input
-                type="text"
-                value={bowlName}
-                onChange={(e) => setBowlName(e.target.value)}
-                placeholder="Nhập tên bowl..."
-                className="w-full border rounded-lg p-2 mt-1 mb-4"
-              />
-
-              {/* Danh sách nguyên liệu đã chọn */}
-              <div className="max-h-40 overflow-y-auto mb-3">
-                {ingredients
-                  .filter((i) => selectedCounts[i.ingredientId] > 0)
-                  .map((item) => (
-                    <div
-                      key={item.ingredientId}
-                      className="flex items-center gap-3 mb-2 bg-[#E6F6ED] rounded-xl p-2"
-                    >
-                      <img
-                        src={item.imageIngredients}
-                        alt={item.ingredientName}
-                        className="w-10 h-10 object-contain rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5A2E00]">
-                          {item.ingredientName} ×{" "}
-                          {selectedCounts[item.ingredientId]}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              {/* Tổng calo */}
-              <div className="text-sm font-semibold text-[#5A2E00] mb-4">
-                Tổng calo:{" "}
-                {ingredients
-                  .reduce(
-                    (sum, i) =>
-                      sum +
-                      (i.calories || 0) * (selectedCounts[i.ingredientId] || 0),
-                    0
+                    0,
                   )
                   .toFixed(0)}{" "}
                 kcal

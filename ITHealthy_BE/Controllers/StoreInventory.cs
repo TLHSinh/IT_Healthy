@@ -2,6 +2,7 @@ using System.Security.Cryptography.X509Certificates;
 using ITHealthy.Data;
 using ITHealthy.DTOs;
 using ITHealthy.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace ITHealthy.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class StoreInventoryController : ControllerBase
     {
         private readonly ITHealthyDbContext _context;

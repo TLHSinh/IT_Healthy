@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -26,6 +26,18 @@ import PickupManagement from "./pages/admin/PickupOrdersPage.jsx";
 
 //
 import AdminLayout from "./layouts/AdminLayout";
+import { setupAdminAxiosInterceptors } from "./api/adminAxios";
+import { isAdminAuthenticated } from "./utils/adminAuth";
+
+setupAdminAxiosInterceptors();
+
+function RequireAdminAuth() {
+  return isAdminAuthenticated() ? <AdminLayout /> : <Navigate to="/admin/login" replace />;
+}
+
+function AdminLoginRoute() {
+  return isAdminAuthenticated() ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />;
+}
 
 function App() {
   return (
@@ -43,11 +55,10 @@ function App() {
       />
 
       <Routes>
-        {/* Trang đăng nhập riêng */}
-        <Route path="/" element={<AdminLogin />} />
+        <Route path="/" element={<Navigate to="/admin/login" replace />} />
+        <Route path="/admin/login" element={<AdminLoginRoute />} />
 
-        {/* Tất cả các trang trong hệ thống admin đều dùng chung layout */}
-        <Route element={<AdminLayout />}>
+        <Route element={<RequireAdminAuth />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/staffs" element={<StaffManagement />} />
           <Route path="/admin/stores" element={<StoreManagement />} />
@@ -73,8 +84,9 @@ function App() {
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
 
           <Route path="/admin/revenue" element={<RevenueDashboard />} />
-
         </Route>
+
+        <Route path="*" element={<Navigate to="/admin/login" replace />} />
       </Routes>
     </Router>
   );

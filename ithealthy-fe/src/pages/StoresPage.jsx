@@ -6,11 +6,11 @@ export default function HomePage() {
 
       <div class="location-section">
         <div class="image-section">
-          <img src="/img/store1.png" alt="Soumaki Phu My Hung Interior" />
+          <img src="/img/store1.png" alt="IT_Healthy Phu My Hung Interior" />
         </div>
 
         <div class="info-section">
-          <h1 class="brand-name">Soumaki</h1>
+          <h1 class="brand-name">IT_Healthy</h1>
           <h2 class="location-name">Phu My Hung</h2>
 
           <div class="find-us">FIND US</div>
@@ -25,7 +25,7 @@ export default function HomePage() {
 
       <div class="location-section">
         <div class="info-section">
-          <h1 class="brand-name">Soumaki</h1>
+          <h1 class="brand-name">IT_Healthy</h1>
           <h2 class="location-name">Ly Tu Trong</h2>
 
           <div class="find-us">FIND US</div>
@@ -38,17 +38,17 @@ export default function HomePage() {
         </div>
 
         <div class="image-section">
-          <img src="/img/store2.jpg" alt="Soumaki Ly Tu Trong Storefront" />
+          <img src="/img/store2.jpg" alt="IT_Healthy Ly Tu Trong Storefront" />
         </div>
       </div>
 
       <div class="location-section">
         <div class="image-section">
-          <img src="/img/store3.jpg" alt="Soumaki Phu My Hung Interior" />
+          <img src="/img/store3.jpg" alt="IT_Healthy Phu My Hung Interior" />
         </div>
 
         <div class="info-section">
-          <h1 class="brand-name">Soumaki</h1>
+          <h1 class="brand-name">IT_Healthy</h1>
           <h2 class="location-name">Phu My Hung</h2>
 
           <div class="find-us">FIND US</div>

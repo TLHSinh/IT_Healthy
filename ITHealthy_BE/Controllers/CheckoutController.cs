@@ -33,8 +33,12 @@ namespace ITHealthy.Controllers
             try
             {
                 var totalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity);
-                var discount = request.Discount ?? 0;
-                var finalPrice = totalPrice - discount;
+                var shippingCost =
+                    request.OrderType == "Shipping"
+                        ? Math.Max(request.ShippingCost ?? 0, 0)
+                        : 0;
+                var discount = Math.Max(request.Discount ?? 0, 0);
+                var finalPrice = Math.Max(totalPrice + shippingCost - discount, 0);
 
                 var order = new Order
                 {
@@ -96,7 +100,7 @@ namespace ITHealthy.Controllers
                         CourierName = request.CourierName,
                         ShipDate = request.ShipDate,
                         ShipTime = request.ShipTime,
-                        Cost = request.ShippingCost
+                        Cost = shippingCost
                     };
                     _context.ShippingDetails.Add(shippingDetail);
                 }

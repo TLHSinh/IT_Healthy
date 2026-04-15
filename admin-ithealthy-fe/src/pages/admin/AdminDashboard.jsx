@@ -17,9 +17,8 @@ import {
 import axios from "axios";
 
 const AdminDashboard = () => {
-  useAuthAdmin();
+  const { admin } = useAuthAdmin();
   const navigate = useNavigate();
-  const admin = JSON.parse(localStorage.getItem("adminInfo"));
 
   const [totalStaff, setTotalStaff] = useState(0);
   const [totalStores, setTotalStores] = useState(0);

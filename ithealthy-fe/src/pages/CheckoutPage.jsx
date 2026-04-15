@@ -146,8 +146,7 @@ export default function CheckoutPage() {
   // ============= CALCULATIONS =============
   const subtotal = cart?.totalPrice || 0;
   const shippingCost = SHIPPING_OPTIONS[shippingMethod]?.price || 0;
-  const tax = subtotal * 0.08; // VAT 8%
-  const total = subtotal + shippingCost + tax - discount;
+  const total = subtotal + shippingCost - discount;
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) {
@@ -676,11 +675,6 @@ export default function CheckoutPage() {
                         ? "Miễn phí"
                         : `${shippingCost.toLocaleString("vi-VN")}₫`}
                     </span>
-                  </div>
-
-                  <div className="flex justify-between text-gray-600">
-                    <span>VAT (8%)</span>
-                    <span>{tax.toLocaleString("vi-VN")}₫</span>
                   </div>
 
                   {discount > 0 && (

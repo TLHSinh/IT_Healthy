@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Menu, User, ChevronDown, ChevronUp,  Mail, Briefcase, CalendarDays, X, UserCircle2, LogOut } from "lucide-react";
+import { clearAdminSession, getAdminInfo } from "../../utils/adminAuth";
 
 const AdminHeader = ({ toggleSidebar }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -9,8 +10,7 @@ const AdminHeader = ({ toggleSidebar }) => {
 
   // Lấy thông tin nhân viên từ localStorage
   useEffect(() => {
-    const staffData = localStorage.getItem("adminInfo");
-    if (staffData) setStaff(JSON.parse(staffData));
+    setStaff(getAdminInfo());
   }, []);
 
   // Ẩn dropdown khi click ra ngoài
@@ -25,9 +25,8 @@ const AdminHeader = ({ toggleSidebar }) => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminInfo");
-    window.location.href = "/";
+    clearAdminSession();
+    window.location.replace("/admin/login");
   };
 
   return (
