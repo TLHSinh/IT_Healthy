@@ -9,6 +9,9 @@ import CalocalculatorPage from "../pages/CalocalculatorPage";
 import AboutusPage from "../pages/AboutusPage";
 import StoresPage from "../pages/StoresPage";
 import BlogsPage from "../pages/BlogsPage";
+// import trang Detail Blog
+import BlogDetail from "../pages/BlogDetail"
+
 import CreateYourBowlPage from "../pages/CreateYourBowlPage";
 import CartsPage from "../pages/CartsPage";
 import CheckoutPage from "../pages/CheckoutPage";
@@ -17,6 +20,7 @@ import PaymentSuccessPage from "../pages/PaymentSuccessPage";
 import UserBowlPage from "../pages/UserBowlPage";
 import CustomerOrdersPage from "../pages/CustomerOrdersPage";
 import Farvorite from "../pages/Farvorite";
+import HealthMonitoringPage from "../pages/HealthMonitoringPage";
 
 import Profile from "../pages/Profile";
 
@@ -36,6 +40,7 @@ export default function AppRoutes() {
           <Route path="/aboutus" element={<AboutusPage />} />
           <Route path="/stores" element={<StoresPage />} />
           <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/createyourbowl" element={<CreateYourBowlPage />} />
           <Route path="/carts" element={<CartsPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
@@ -48,6 +53,7 @@ export default function AppRoutes() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/customerorders" element={<CustomerOrdersPage />} />
             <Route path="/farvorite" element={<Farvorite />} />
+            <Route path="/health-monitoring" element={<HealthMonitoringPage />} />
 
             
           </Route>

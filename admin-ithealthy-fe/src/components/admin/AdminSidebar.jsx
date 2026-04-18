@@ -11,6 +11,7 @@ import {
   Coins,
   Gift,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 import HELogo from "../../assets/HE.png";
 
@@ -121,6 +122,19 @@ const AdminSidebar = ({ isOpen }) => {
         >
           <Store size={20} />
           {isOpen && <span>Quản lý Cửa hàng</span>}
+        </NavLink>
+
+        {/* Blog */}
+        <NavLink
+          to="/admin/blogs"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              isActive ? "bg-orange-100 text-orange-600 font-semibold" : "text-gray-700 hover:bg-orange-50"
+            }`
+          }
+        >
+          <FileText size={20} />
+          {isOpen && <span>Quản lý Blog</span>}
         </NavLink>
 
         {/* Quản lý Đơn hàng (Ship + Pickup) */}

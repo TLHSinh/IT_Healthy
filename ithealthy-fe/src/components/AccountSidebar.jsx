@@ -7,15 +7,16 @@ import {
   Lock,
   MessageSquare,
   Heart,
+  HeartPulse,
 } from "lucide-react";
 
 const menu = [
   { label: "Tài khoản", to: "/profile", icon: User },
   { label: "Lịch sử đơn hàng", to: "/CustomerOrders", icon: ShoppingCart },
   { label: "Tạo món của bạn", to: "/farvorite", icon: Heart },
-  { label: "Lịch sử giao dịch", to: "/account/transactions", icon: CreditCard },
-  { label: "Mật khẩu và bảo mật", to: "/account/security", icon: Lock },
-  { label: "Bình luận của tôi", to: "/account/comments", icon: MessageSquare },
+  { label: "Theo dõi sức khỏe", to: "/health-monitoring", icon: HeartPulse },
+  // { label: "Mật khẩu và bảo mật", to: "/account/security", icon: Lock },
+  // { label: "Bình luận của tôi", to: "/account/comments", icon: MessageSquare },
 ];
 
 export default function AccountSidebar() {

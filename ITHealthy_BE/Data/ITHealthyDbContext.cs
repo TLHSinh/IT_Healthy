@@ -16,6 +16,9 @@ public partial class ITHealthyDbContext : DbContext
     {
     }
 
+    public virtual DbSet<Blog> Blogs { get; set; }
+    public virtual DbSet<HealthRecord> HealthRecords { get; set; }
+
     public virtual DbSet<Bowl> Bowls { get; set; }
 
     public virtual DbSet<BowlItem> BowlItems { get; set; }
@@ -35,7 +38,7 @@ public partial class ITHealthyDbContext : DbContext
     public virtual DbSet<CourierService> CourierServices { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
-
+    
     public virtual DbSet<CustomerAddress> CustomerAddresses { get; set; }
 
     public virtual DbSet<Feedback> Feedbacks { get; set; }
@@ -101,6 +104,7 @@ public partial class ITHealthyDbContext : DbContext
     public virtual DbSet<VoucherRedemption> VoucherRedemptions { get; set; }
 
     public virtual DbSet<VoucherStore> VoucherStores { get; set; }
+    
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

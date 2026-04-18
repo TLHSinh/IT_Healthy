@@ -23,7 +23,8 @@ import PromotionsManagement from "./pages/admin/PromotionsManagement";
 import ShippingManagement from "./pages/admin/ShippingOrdersPage.jsx";
 import PickupManagement from "./pages/admin/PickupOrdersPage.jsx";
 
-
+// Blog
+import BlogManagement from "./pages/admin/AdminBlogPage.jsx";
 //
 import AdminLayout from "./layouts/AdminLayout";
 
@@ -73,6 +74,9 @@ function App() {
           <Route path="/admin/ingredients" element={<IngredientManagement />} />
 
           <Route path="/admin/revenue" element={<RevenueDashboard />} />
+
+          {/* Blog */}
+          <Route path="/admin/blogs" element={<BlogManagement />} />
 
         </Route>
       </Routes>
