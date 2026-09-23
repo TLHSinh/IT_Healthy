@@ -55,7 +55,7 @@ export default function PaymentSuccessPage() {
         {
           orderId: parseInt(systemOrderId),
           cartId: parseInt(cartId),
-        }
+        },
       );
 
       if (response.data?.message) {
@@ -88,7 +88,7 @@ export default function PaymentSuccessPage() {
     if (isSuccess && !paymentConfirmed) {
       await handlePostCheckout();
     }
-    navigate("/products");
+    navigate("/signature-bowls");
   };
 
   return (

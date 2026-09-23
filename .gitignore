@@ -52,6 +52,7 @@ Logs/
 .env
 .env.local
 .env.development
+docker-compose.yml
 
 # OS generated files
 .DS_Store

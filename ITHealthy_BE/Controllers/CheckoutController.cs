@@ -9,6 +9,11 @@ namespace ITHealthy.Controllers
     [ApiController]
     public class CheckoutController : ControllerBase
     {
+        private const string OrderTypeShipping = "Shipping";
+        private const string OrderTypePickup = "Pickup";
+        private const string PaymentMethodCod = "COD";
+        private const string PaymentMethodMomo = "MOMO";
+
         private readonly ITHealthyDbContext _context;
         private readonly IMomoService _momoService;
 
@@ -25,22 +30,39 @@ namespace ITHealthy.Controllers
             if (request == null || request.Items == null || !request.Items.Any())
                 return BadRequest("Invalid checkout request.");
 
-            if (string.IsNullOrWhiteSpace(request.OrderType) ||
-                !(request.OrderType == "Shipping" || request.OrderType == "Pickup"))
+            var orderType = NormalizeOrderType(request.OrderType);
+            if (orderType == null)
                 return BadRequest("OrderType must be either 'Shipping' or 'Pickup'.");
+
+            var paymentMethod = NormalizePaymentMethod(request.PaymentMethod);
+            if (paymentMethod == null)
+                return BadRequest("PaymentMethod must be either 'COD' or 'MOMO'.");
+
+            var itemValidation = ValidateCheckoutItems(request.Items);
+            if (!itemValidation.IsSuccess)
+                return BadRequest(itemValidation.ErrorMessage);
+
+            if (orderType == OrderTypeShipping && !request.ShippingAddressId.HasValue)
+                return BadRequest("ShippingAddressId is required for shipping orders.");
+
+            var totalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity);
+            var shippingCost =
+                orderType == OrderTypeShipping
+                    ? Math.Max(request.ShippingCost ?? 0, 0)
+                    : 0;
+            var discount = Math.Max(request.Discount ?? 0, 0);
+            var finalPrice = Math.Max(totalPrice + shippingCost - discount, 0);
+
+            if (finalPrice <= 0)
+                return BadRequest("FinalPrice must be greater than 0.");
+
+            Order order = null!;
+            Payment payment = null!;
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var totalPrice = request.Items.Sum(i => i.UnitPrice * i.Quantity);
-                var shippingCost =
-                    request.OrderType == "Shipping"
-                        ? Math.Max(request.ShippingCost ?? 0, 0)
-                        : 0;
-                var discount = Math.Max(request.Discount ?? 0, 0);
-                var finalPrice = Math.Max(totalPrice + shippingCost - discount, 0);
-
-                var order = new Order
+                order = new Order
                 {
                     CustomerId = request.CustomerId,
                     StoreId = request.StoreId,
@@ -53,17 +75,17 @@ namespace ITHealthy.Controllers
                     StatusOrder = "Pending",
                     InventoryDeducted = false,
                     OrderNote = request.OrderNote,
-                    OrderType = request.OrderType
+                    OrderType = orderType
                 };
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
-                var payment = new Payment
+                payment = new Payment
                 {
                     OrderId = order.OrderId,
                     PaymentDate = DateTime.UtcNow,
-                    PaymentMethod = request.PaymentMethod, // "COD" or "MOMO"
+                    PaymentMethod = paymentMethod,
                     Amount = order.FinalPrice,
                     Status = "Pending"
                 };
@@ -107,7 +129,7 @@ namespace ITHealthy.Controllers
 
                 await _context.SaveChangesAsync();
 
-                if (request.PaymentMethod == "COD")
+                if (paymentMethod == PaymentMethodCod)
                 {
                     // COD: trừ kho + xóa cart ngay
                     var invResult = await DeductInventoryForOrder(order.OrderId, request.StoreId);
@@ -126,9 +148,19 @@ namespace ITHealthy.Controllers
                 }
 
 
-                else if (request.PaymentMethod == "MOMO")
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Checkout failed: {ex.Message}");
+            }
+
+            if (paymentMethod == PaymentMethodMomo)
+            {
+                try
                 {
-                    // MOMO: tạo payment link, KHÔNG trừ kho, KHÔNG xóa cart
+                    // MOMO: tạo payment link sau khi đơn đã được lưu, KHÔNG trừ kho, KHÔNG xóa cart
                     var description = $"Thanh toán đơn hàng {order.OrderId}";
                     var extraData = order.OrderId.ToString(); // để IPN quay về nhận diện
 
@@ -139,15 +171,8 @@ namespace ITHealthy.Controllers
                         extraData
                     );
 
-                    // Gợi ý: lưu momoOrderId && requestId vào Payment
                     payment.Status = "Pending";
-                    // Bạn có thể thêm cột vào Payment:
-                    // payment.MomoOrderId = momoResponse.orderId;
-                    // payment.MomoRequestId = momoResponse.requestId;
                     await _context.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-
 
                     return Ok(new
                     {
@@ -157,18 +182,71 @@ namespace ITHealthy.Controllers
                         message = "Order created. Redirect to MoMo."
                     });
                 }
-                else
+                catch (Exception ex)
                 {
-                    await transaction.RollbackAsync();
-                    return BadRequest("Unsupported payment method.");
+                    payment.Status = "Failed";
+                    payment.PaymentDate = DateTime.UtcNow;
+                    order.StatusOrder = "Cancelled";
+                    await _context.SaveChangesAsync();
+
+                    return StatusCode(502, new
+                    {
+                        orderId = order.OrderId,
+                        message = "Cannot create MoMo payment.",
+                        detail = ex.Message
+                    });
                 }
             }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                return StatusCode(500, $"Checkout failed: {ex.Message}");
 
+            return BadRequest("Unsupported payment method.");
+        }
+
+        private static string? NormalizeOrderType(string? orderType)
+        {
+            if (string.IsNullOrWhiteSpace(orderType))
+                return null;
+
+            return orderType.Trim().ToLowerInvariant() switch
+            {
+                "shipping" => OrderTypeShipping,
+                "pickup" => OrderTypePickup,
+                _ => null
+            };
+        }
+
+        private static string? NormalizePaymentMethod(string? paymentMethod)
+        {
+            if (string.IsNullOrWhiteSpace(paymentMethod))
+                return null;
+
+            return paymentMethod.Trim().ToUpperInvariant() switch
+            {
+                PaymentMethodCod => PaymentMethodCod,
+                PaymentMethodMomo => PaymentMethodMomo,
+                _ => null
+            };
+        }
+
+        private static OperationResult ValidateCheckoutItems(IEnumerable<CheckoutItem> items)
+        {
+            foreach (var item in items)
+            {
+                if (item.Quantity <= 0)
+                    return OperationResult.Fail("Item quantity must be greater than 0.");
+
+                if (item.UnitPrice < 0)
+                    return OperationResult.Fail("Item unit price cannot be negative.");
+
+                var selectedItemTypes = 0;
+                if (item.ProductId.HasValue) selectedItemTypes++;
+                if (item.ComboId.HasValue) selectedItemTypes++;
+                if (item.BowlId.HasValue) selectedItemTypes++;
+
+                if (selectedItemTypes != 1)
+                    return OperationResult.Fail("Each checkout item must contain exactly one of ProductId, ComboId, or BowlId.");
             }
+
+            return OperationResult.Success();
         }
 
         //Helper trừ kho xoá giỏ hàng
@@ -180,6 +258,9 @@ namespace ITHealthy.Controllers
 
             foreach (var orderItem in orderItems)
             {
+                if (!orderItem.ProductId.HasValue)
+                    continue;
+
                 var productIngredients = await _context.ProductIngredients
                     .Where(pi => pi.ProductId == orderItem.ProductId.Value)
                     .ToListAsync();
@@ -260,92 +341,33 @@ namespace ITHealthy.Controllers
             if (request == null || request.OrderId <= 0 || request.CartId <= 0)
                 return BadRequest("orderId or cartId is missing.");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(o => o.Payments)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
 
-            try
+            if (order == null)
+                return NotFound("Order not found.");
+
+            var momoPayment = order.Payments.FirstOrDefault(p => p.PaymentMethod == PaymentMethodMomo);
+            if (momoPayment != null && momoPayment.Status != "Success")
             {
-                var order = await _context.Orders
-                    .Include(o => o.OrderItems)
-                    .Include(o => o.Payments)
-                    .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
-
-                if (order == null)
-                    return NotFound("Order not found.");
-
-                // 🔥 1. Trừ kho nếu chưa trừ
-                if (order.InventoryDeducted != true)
+                return Accepted(new
                 {
-                    foreach (var item in order.OrderItems)
-                    {
-                        if (item.ProductId.HasValue)
-                        {
-                            var ingredients = await _context.ProductIngredients
-                                .Where(pi => pi.ProductId == item.ProductId.Value)
-                                .ToListAsync();
-
-                            foreach (var pi in ingredients)
-                            {
-                                var inventory = await _context.StoreInventories
-                                    .FirstOrDefaultAsync(si =>
-                                        si.StoreId == order.StoreId &&
-                                        si.IngredientId == pi.IngredientId);
-
-                                if (inventory == null)
-                                    return BadRequest($"Ingredient {pi.IngredientId} not found.");
-
-                                decimal used = Math.Round(pi.Quantity * item.Quantity, 2);
-                                decimal epsilon = 0.0001M;
-
-                                if ((inventory.StockQuantity ?? 0) + epsilon < used)
-                                    return BadRequest($"Not enough stock for ingredient {pi.IngredientId}");
-
-                                inventory.StockQuantity -= used;
-                                inventory.LastUpdated = DateTime.UtcNow;
-
-                                _context.OrderItemIngredients.Add(new OrderItemIngredient
-                                {
-                                    OrderItemId = item.OrderItemId,
-                                    IngredientId = pi.IngredientId,
-                                    Quantity = used
-                                });
-                            }
-                        }
-                    }
-
-                    order.InventoryDeducted = true;
-                }
-
-                // 🔥 2. Xoá đúng giỏ hàng được gửi lên (cartId)
-                var cart = await _context.Carts
-                    .Include(c => c.CartItems)
-                    .FirstOrDefaultAsync(c => c.CartId == request.CartId);
-
-                if (cart != null)
-                {
-                    _context.CartItems.RemoveRange(cart.CartItems);
-                    _context.Carts.Remove(cart);
-                }
-
-                // 🔥 3. Update Payment = Success
-                foreach (var pay in order.Payments)
-                {
-                    pay.Status = "Paid";
-                    pay.PaymentDate = DateTime.UtcNow;
-                }
-
-                // 🔥 4. Update Order Status = Completed
-                order.StatusOrder = "Pending";
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return Ok(new { message = "Order confirmed, inventory updated, cart removed, payment successful." });
+                    orderId = order.OrderId,
+                    paymentStatus = momoPayment.Status,
+                    orderStatus = order.StatusOrder,
+                    message = "MoMo payment is waiting for the signed IPN callback."
+                });
             }
-            catch (Exception ex)
+
+            return Ok(new
             {
-                await transaction.RollbackAsync();
-                return StatusCode(500, ex.Message);
-            }
+                orderId = order.OrderId,
+                paymentStatus = order.Payments.FirstOrDefault()?.Status,
+                orderStatus = order.StatusOrder,
+                inventoryDeducted = order.InventoryDeducted
+            });
         }
 
 

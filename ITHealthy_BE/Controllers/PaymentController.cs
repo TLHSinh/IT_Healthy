@@ -14,6 +14,10 @@ namespace ITHealthy.Controllers
     [ApiController]
     public class PaymentController : ControllerBase
     {
+        private const string PaymentMethodMomo = "MOMO";
+        private const string PaymentStatusSuccess = "Success";
+        private const string PaymentStatusFailed = "Failed";
+
         private readonly ITHealthyDbContext _context;
         private readonly MomoSettings _settings;
 
@@ -30,85 +34,48 @@ namespace ITHealthy.Controllers
         [HttpPost("confirm-momo-payment")]
         public async Task<IActionResult> ConfirmMomoPayment([FromBody] ConfirmMomoPaymentRequest request)
         {
-            Console.WriteLine($"=== Confirming MoMo Payment for Order {request.OrderId} ===");
+            if (request == null || request.OrderId <= 0)
+                return BadRequest(new { message = "Invalid request", success = false });
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            var order = await _context.Orders
+                .Include(o => o.Payments)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
 
-            try
+            if (order == null)
+                return NotFound(new { message = "Order not found", success = false });
+
+            var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == PaymentMethodMomo);
+            if (payment == null)
+                return BadRequest(new { message = "MoMo payment not found", success = false });
+
+            if (payment.Status == PaymentStatusSuccess)
             {
-                var order = await _context.Orders
-                    .Include(o => o.Payments)
-                    .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
-
-                if (order == null)
+                return Ok(new
                 {
-                    return NotFound(new { message = "Order not found" });
-                }
-
-                var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == "MOMO");
-                if (payment == null)
-                {
-                    return BadRequest(new { message = "MoMo payment not found" });
-                }
-
-                // Check if already processed
-                if (payment.Status == "Success")
-                {
-                    Console.WriteLine("⚠️ Payment already processed");
-                    return Ok(new { message = "Payment already confirmed", alreadyProcessed = true });
-                }
-
-                // Check MoMo result code
-                if (request.ResultCode != 0)
-                {
-                    payment.Status = "Failed";
-                    payment.PaymentDate = DateTime.UtcNow;
-                    order.StatusOrder = "Cancelled";
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    return Ok(new { message = "Payment failed", success = false });
-                }
-
-                // ==============================
-                // SUCCESS: Deduct inventory + Remove cart
-                // ==============================
-                var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
-                if (!invResult.IsSuccess)
-                {
-                    payment.Status = "Failed";
-                    order.StatusOrder = "Cancelled";
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    return BadRequest(new { message = invResult.ErrorMessage, success = false });
-                }
-
-                await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
-
-                payment.Status = "Success";
-                payment.PaymentDate = DateTime.UtcNow;
-                order.InventoryDeducted = true;
-                order.StatusOrder = "Confirmed";
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                Console.WriteLine("✅ Payment confirmed successfully");
-                return Ok(new { message = "Payment confirmed successfully", success = true });
+                    message = "Payment already confirmed by MoMo IPN",
+                    success = true,
+                    paymentStatus = payment.Status,
+                    orderStatus = order.StatusOrder
+                });
             }
-            catch (Exception ex)
+
+            return Accepted(new
             {
-                await transaction.RollbackAsync();
-                Console.WriteLine($"❌ EXCEPTION: {ex.Message}");
-                return StatusCode(500, new { message = ex.Message, success = false });
-            }
+                message = "Client return received. Waiting for signed MoMo IPN before confirming payment.",
+                success = false,
+                paymentStatus = payment.Status,
+                orderStatus = order.StatusOrder,
+                clientResultCode = request.ResultCode
+            });
         }
 
         [HttpPost("momo-ipn")]
         public async Task<IActionResult> MomoIpn([FromBody] MomoIpnRequest request)
         {
+            if (request == null)
+                return BadRequest(new { message = "Invalid IPN payload" });
+
             Console.WriteLine("=== MoMo IPN Received ===");
             Console.WriteLine(JsonSerializer.Serialize(request));
 
@@ -138,21 +105,29 @@ namespace ITHealthy.Controllers
                 }
                 Console.WriteLine("✅ Signature OK");
 
-                Console.WriteLine("RAW SIGNATURE ===> " + rawSignature);
-                Console.WriteLine("EXPECTED SIGNATURE ===> " + expected);
-                Console.WriteLine("MOMO SIGNATURE ===> " + request.signature);
-
+                if (!string.Equals(request.partnerCode, _settings.PartnerCode, StringComparison.Ordinal))
+                    return BadRequest(new { message = "Invalid partnerCode" });
 
                 // ==============================
                 // 2️⃣ DECODE extraData -> ORDERID
                 // ==============================
-                string decodedExtra = Encoding.UTF8.GetString(Convert.FromBase64String(request.extraData));
+                string decodedExtra;
+                try
+                {
+                    decodedExtra = Encoding.UTF8.GetString(Convert.FromBase64String(request.extraData));
+                }
+                catch (FormatException)
+                {
+                    return BadRequest(new { message = "Invalid extraData" });
+                }
 
                 if (!int.TryParse(decodedExtra, out int systemOrderId))
                 {
                     return BadRequest(new { message = "Invalid extraData" });
                 }
-                Console.WriteLine($"🆔 SYSTEM ORDERID: {systemOrderId}");
+
+                if (!request.orderId.StartsWith($"{systemOrderId}-", StringComparison.Ordinal))
+                    return BadRequest(new { message = "MoMo orderId does not match extraData" });
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -165,10 +140,16 @@ namespace ITHealthy.Controllers
                     return NotFound(new { message = "Order not found" });
                 }
 
-                var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == "MOMO");
+                var payment = order.Payments.FirstOrDefault(p => p.PaymentMethod == PaymentMethodMomo);
                 if (payment == null)
                 {
                     return BadRequest(new { message = "MoMo payment not found" });
+                }
+
+                var expectedAmount = (long)Math.Round(order.FinalPrice ?? 0, 0);
+                if (request.amount != expectedAmount)
+                {
+                    return BadRequest(new { message = "Invalid payment amount" });
                 }
 
                 // ==============================
@@ -176,28 +157,30 @@ namespace ITHealthy.Controllers
                 // ==============================
                 if (request.resultCode == 0)
                 {
-                    if (payment.Status == "Success")
+                    if (payment.Status == PaymentStatusSuccess && order.InventoryDeducted == true)
                     {
-                        Console.WriteLine("⚠️ Payment already processed");
                         return Ok(new { message = "Already processed" });
                     }
 
-                    var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
-                    if (!invResult.IsSuccess)
+                    if (order.InventoryDeducted != true)
                     {
-                        payment.Status = "Failed";
-                        order.StatusOrder = "Cancelled";
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
+                        var invResult = await DeductInventoryForOrder(order.OrderId, order.StoreId ?? 0);
+                        if (!invResult.IsSuccess)
+                        {
+                            payment.Status = PaymentStatusFailed;
+                            order.StatusOrder = "Cancelled";
+                            await _context.SaveChangesAsync();
+                            await transaction.CommitAsync();
 
-                        return BadRequest(invResult.ErrorMessage);
+                            return BadRequest(invResult.ErrorMessage);
+                        }
+
+                        await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
+                        order.InventoryDeducted = true;
                     }
 
-                    await RemoveCartItemsForOrder(order.OrderId, order.CustomerId);
-
-                    payment.Status = "Success";
+                    payment.Status = PaymentStatusSuccess;
                     payment.PaymentDate = DateTime.UtcNow;
-                    order.InventoryDeducted = true;
                     order.StatusOrder = "Confirmed";
 
                     await _context.SaveChangesAsync();
@@ -207,7 +190,7 @@ namespace ITHealthy.Controllers
                 }
                 else
                 {
-                    payment.Status = "Failed";
+                    payment.Status = PaymentStatusFailed;
                     payment.PaymentDate = DateTime.UtcNow;
                     order.StatusOrder = "Cancelled";
 
